@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Check, X, Edit2, Trash2 } from "lucide-react";
+import { Check, X, Edit2, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "../lib/supabase";
@@ -32,6 +32,39 @@ export function TransactionList({
     category: "",
     due_date: "",
   });
+
+  const [sortConfig, setSortConfig] = useState<{
+    key: string;
+    direction: "ascending" | "descending";
+  } | null>(null);
+
+  const sortedTransactions = React.useMemo(() => {
+    let sortableTransactions = [...transactions];
+    if (sortConfig !== null) {
+      sortableTransactions.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === "ascending" ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === "ascending" ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableTransactions;
+  }, [transactions, sortConfig]);
+
+  const requestSort = (key: string) => {
+    let direction: "ascending" | "descending" = "ascending";
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "ascending"
+    ) {
+      direction = "descending";
+    }
+    setSortConfig({ key, direction });
+  };
 
   const togglePaid = async (id: string, isPaid: boolean) => {
     const { error } = await supabase
@@ -107,11 +140,35 @@ export function TransactionList({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => requestSort("type")}
+              >
                 Tipo
+                {sortConfig?.key === "type" ? (
+                  sortConfig.direction === "ascending" ? (
+                    <ChevronUp className="inline ml-1 w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="inline ml-1 w-4 h-4" />
+                  )
+                ) : (
+                  <ChevronDown className="inline ml-1 w-4 h-4 text-gray-400" />
+                )}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => requestSort("amount")}
+              >
                 Valor
+                {sortConfig?.key === "amount" ? (
+                  sortConfig.direction === "ascending" ? (
+                    <ChevronUp className="inline ml-1 w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="inline ml-1 w-4 h-4" />
+                  )
+                ) : (
+                  <ChevronDown className="inline ml-1 w-4 h-4 text-gray-400" />
+                )}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Descrição
@@ -122,8 +179,20 @@ export function TransactionList({
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Data de Vencimento
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => requestSort("is_paid")}
+              >
                 Status
+                {sortConfig?.key === "is_paid" ? (
+                  sortConfig.direction === "ascending" ? (
+                    <ChevronUp className="inline ml-1 w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="inline ml-1 w-4 h-4" />
+                  )
+                ) : (
+                  <ChevronDown className="inline ml-1 w-4 h-4 text-gray-400" />
+                )}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
@@ -131,7 +200,7 @@ export function TransactionList({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {transactions.map((transaction) => (
+            {sortedTransactions.map((transaction) => (
               <tr key={transaction.id}>
                 {editingId === transaction.id ? (
                   <>
