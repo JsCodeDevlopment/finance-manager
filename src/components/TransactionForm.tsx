@@ -1,65 +1,71 @@
-import React, { useState } from 'react';
-import { PlusCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import React, { useState } from "react";
+import { PlusCircle } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 interface TransactionFormProps {
   onTransactionAdded: () => void;
 }
 
 export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
-  const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [type, setType] = useState<"income" | "expense">("expense");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
+  const [dueDate, setDueDate] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const { error } = await supabase
-      .from('transactions')
-      .insert([{
+
+    const { error } = await supabase.from("transactions").insert([
+      {
         type,
         amount: parseFloat(amount),
         description,
         category,
         due_date: dueDate,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      }]);
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+      },
+    ]);
 
     if (!error) {
-      setAmount('');
-      setDescription('');
-      setCategory('');
-      setDueDate('');
+      setAmount("");
+      setDescription("");
+      setCategory("");
+      setDueDate("");
       onTransactionAdded();
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold mb-4">Add New Transaction</h2>
-      
+      <h2 className="text-xl font-semibold mb-4">Adicionar Nova Transação</h2>
+
       <div className="grid grid-cols-2 gap-4 mb-4">
         <button
           type="button"
-          className={`p-2 rounded ${type === 'income' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setType('income')}
+          className={`p-2 rounded ${
+            type === "income" ? "bg-green-500 text-white" : "bg-gray-200"
+          }`}
+          onClick={() => setType("income")}
         >
-          Income
+          Receita
         </button>
         <button
           type="button"
-          className={`p-2 rounded ${type === 'expense' ? 'bg-red-500 text-white' : 'bg-gray-200'}`}
-          onClick={() => setType('expense')}
+          className={`p-2 rounded ${
+            type === "expense" ? "bg-red-500 text-white" : "bg-gray-200"
+          }`}
+          onClick={() => setType("expense")}
         >
-          Expense
+          Despesa
         </button>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Amount</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Valor
+          </label>
           <input
             type="number"
             step="0.01"
@@ -71,7 +77,9 @@ export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Descrição
+          </label>
           <input
             type="text"
             required
@@ -82,7 +90,9 @@ export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Category</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Categoria
+          </label>
           <input
             type="text"
             required
@@ -93,7 +103,9 @@ export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Due Date</label>
+          <label className="block text-sm font-medium text-gray-700">
+            Data de Vencimento
+          </label>
           <input
             type="date"
             required
@@ -108,7 +120,7 @@ export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
           className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
         >
           <PlusCircle className="w-4 h-4 mr-2" />
-          Add Transaction
+          Adicionar Transação
         </button>
       </div>
     </form>

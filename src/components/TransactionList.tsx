@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Check, X, Edit2, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { supabase } from '../lib/supabase';
+import React, { useState } from "react";
+import { Check, X, Edit2, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { supabase } from "../lib/supabase";
 
 interface Transaction {
   id: string;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   amount: number;
   description: string;
   category: string;
@@ -18,21 +18,24 @@ interface TransactionListProps {
   onTransactionUpdated: () => void;
 }
 
-export function TransactionList({ transactions, onTransactionUpdated }: TransactionListProps) {
+export function TransactionList({
+  transactions,
+  onTransactionUpdated,
+}: TransactionListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
-    type: 'expense' as 'income' | 'expense',
-    amount: '',
-    description: '',
-    category: '',
-    due_date: '',
+    type: "expense" as "income" | "expense",
+    amount: "",
+    description: "",
+    category: "",
+    due_date: "",
   });
 
   const togglePaid = async (id: string, isPaid: boolean) => {
     const { error } = await supabase
-      .from('transactions')
+      .from("transactions")
       .update({ is_paid: !isPaid })
-      .eq('id', id);
+      .eq("id", id);
 
     if (!error) {
       onTransactionUpdated();
@@ -53,17 +56,17 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
   const cancelEdit = () => {
     setEditingId(null);
     setEditForm({
-      type: 'expense',
-      amount: '',
-      description: '',
-      category: '',
-      due_date: '',
+      type: "expense",
+      amount: "",
+      description: "",
+      category: "",
+      due_date: "",
     });
   };
 
   const handleEdit = async (id: string) => {
     const { error } = await supabase
-      .from('transactions')
+      .from("transactions")
       .update({
         type: editForm.type,
         amount: parseFloat(editForm.amount),
@@ -71,27 +74,27 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
         category: editForm.category,
         due_date: editForm.due_date,
       })
-      .eq('id', id);
+      .eq("id", id);
 
     if (!error) {
       onTransactionUpdated();
       cancelEdit();
     } else {
-      alert('Error updating transaction');
+      alert("Erro ao atualizar transação");
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
+    if (window.confirm("Tem certeza que deseja excluir esta transação?")) {
       const { error } = await supabase
-        .from('transactions')
+        .from("transactions")
         .delete()
-        .eq('id', id);
+        .eq("id", id);
 
       if (!error) {
         onTransactionUpdated();
       } else {
-        alert('Error deleting transaction');
+        alert("Erro ao excluir transação");
       }
     }
   };
@@ -102,13 +105,27 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipo
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Descrição
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Categoria
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Data de Vencimento
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -119,11 +136,16 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
                         value={editForm.type}
-                        onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'income' | 'expense' })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            type: e.target.value as "income" | "expense",
+                          })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       >
-                        <option value="income">Income</option>
-                        <option value="expense">Expense</option>
+                        <option value="income">Receita</option>
+                        <option value="expense">Despesa</option>
                       </select>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -131,7 +153,9 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                         type="number"
                         step="0.01"
                         value={editForm.amount}
-                        onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, amount: e.target.value })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
                     </td>
@@ -139,7 +163,12 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                       <input
                         type="text"
                         value={editForm.description}
-                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            description: e.target.value,
+                          })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
                     </td>
@@ -147,7 +176,9 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                       <input
                         type="text"
                         value={editForm.category}
-                        onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, category: e.target.value })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
                     </td>
@@ -155,15 +186,21 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                       <input
                         type="date"
                         value={editForm.due_date}
-                        onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, due_date: e.target.value })
+                        }
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        transaction.is_paid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {transaction.is_paid ? 'Paid' : 'Pending'}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          transaction.is_paid
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {transaction.is_paid ? "Pago" : "Pendente"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
@@ -171,55 +208,69 @@ export function TransactionList({ transactions, onTransactionUpdated }: Transact
                         onClick={() => handleEdit(transaction.id)}
                         className="text-green-600 hover:text-green-900"
                       >
-                        Save
+                        Salvar
                       </button>
                       <button
                         onClick={cancelEdit}
                         className="text-gray-600 hover:text-gray-900"
                       >
-                        Cancel
+                        Cancelar
                       </button>
                     </td>
                   </>
                 ) : (
                   <>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        transaction.type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {transaction.type}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          transaction.type === "income"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {transaction.type === "income" ? "Receita" : "Despesa"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`font-medium ${
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        ${transaction.amount.toFixed(2)}
+                      <span
+                        className={`font-medium ${
+                          transaction.type === "income"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        R${transaction.amount.toFixed(2)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{transaction.description}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{transaction.category}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {format(new Date(transaction.due_date), 'MMM dd, yyyy')}
+                      {transaction.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {transaction.category}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {format(new Date(transaction.due_date), "dd MMM, yyyy")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
-                        onClick={() => togglePaid(transaction.id, transaction.is_paid)}
+                        onClick={() =>
+                          togglePaid(transaction.id, transaction.is_paid)
+                        }
                         className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
                           transaction.is_paid
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
                         {transaction.is_paid ? (
                           <>
                             <Check className="w-4 h-4 mr-1" />
-                            Paid
+                            Pago
                           </>
                         ) : (
                           <>
                             <X className="w-4 h-4 mr-1" />
-                            Pending
+                            Pendente
                           </>
                         )}
                       </button>

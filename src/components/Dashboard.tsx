@@ -1,9 +1,18 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import React from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 
 interface Transaction {
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   amount: number;
 }
 
@@ -13,20 +22,20 @@ interface DashboardProps {
 
 export function Dashboard({ transactions }: DashboardProps) {
   const totalIncome = transactions
-    .filter(t => t.type === 'income')
+    .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
+    .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const balance = totalIncome - totalExpenses;
 
   // Prepare data for the chart
   const chartData = [
-    { name: 'Income', amount: totalIncome },
-    { name: 'Expenses', amount: totalExpenses },
-    { name: 'Balance', amount: balance }
+    { name: "Renda", amount: totalIncome },
+    { name: "Despesas", amount: totalExpenses },
+    { name: "Saldo", amount: balance },
   ];
 
   return (
@@ -38,8 +47,10 @@ export function Dashboard({ transactions }: DashboardProps) {
               <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Income</p>
-              <p className="text-2xl font-semibold text-gray-900">${totalIncome.toFixed(2)}</p>
+              <p className="text-sm font-medium text-gray-500">Renda Total</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                R${totalIncome.toFixed(2)}
+              </p>
             </div>
           </div>
         </div>
@@ -50,8 +61,12 @@ export function Dashboard({ transactions }: DashboardProps) {
               <TrendingDown className="h-6 w-6 text-red-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total Expenses</p>
-              <p className="text-2xl font-semibold text-gray-900">${totalExpenses.toFixed(2)}</p>
+              <p className="text-sm font-medium text-gray-500">
+                Despesas Totais
+              </p>
+              <p className="text-2xl font-semibold text-gray-900">
+                R${totalExpenses.toFixed(2)}
+              </p>
             </div>
           </div>
         </div>
@@ -62,9 +77,13 @@ export function Dashboard({ transactions }: DashboardProps) {
               <DollarSign className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Current Balance</p>
-              <p className={`text-2xl font-semibold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                ${balance.toFixed(2)}
+              <p className="text-sm font-medium text-gray-500">Saldo Atual</p>
+              <p
+                className={`text-2xl font-semibold ${
+                  balance >= 0 ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                R${balance.toFixed(2)}
               </p>
             </div>
           </div>
@@ -72,7 +91,7 @@ export function Dashboard({ transactions }: DashboardProps) {
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Financial Overview</h3>
+        <h3 className="text-lg font-semibold mb-4">Visão Geral Financeira</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
