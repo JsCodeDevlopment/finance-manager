@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { formatCurrency } from "../helpers/currency-formater";
 
 interface Transaction {
   type: "income" | "expense";
@@ -49,7 +50,7 @@ export function Dashboard({ transactions }: DashboardProps) {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Renda Total</p>
               <p className="text-2xl font-semibold text-gray-900">
-                R${totalIncome.toFixed(2)}
+                {formatCurrency(totalIncome)}
               </p>
             </div>
           </div>
@@ -65,7 +66,7 @@ export function Dashboard({ transactions }: DashboardProps) {
                 Despesas Totais
               </p>
               <p className="text-2xl font-semibold text-gray-900">
-                R${totalExpenses.toFixed(2)}
+                {formatCurrency(totalExpenses)}
               </p>
             </div>
           </div>
@@ -83,7 +84,7 @@ export function Dashboard({ transactions }: DashboardProps) {
                   balance >= 0 ? "text-green-600" : "text-red-600"
                 }`}
               >
-                R${balance.toFixed(2)}
+                {formatCurrency(balance)}
               </p>
             </div>
           </div>

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Check, X, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { supabase } from "../lib/supabase";
+import { formatCurrency } from "../helpers/currency-formater";
 
 interface Transaction {
   id: string;
@@ -239,7 +241,7 @@ export function TransactionList({
                             : "text-red-600"
                         }`}
                       >
-                        R${transaction.amount.toFixed(2)}
+                        {formatCurrency(transaction.amount)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -249,7 +251,9 @@ export function TransactionList({
                       {transaction.category}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {format(new Date(transaction.due_date), "dd MMM, yyyy")}
+                      {format(new Date(transaction.due_date), "dd/MM/yyyy", {
+                        locale: ptBR,
+                      })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
