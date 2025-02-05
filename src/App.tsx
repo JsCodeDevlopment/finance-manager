@@ -60,7 +60,7 @@ function App() {
       }
 
       if (isSignUp) {
-        alert('Registration successful! You can now sign in.');
+        alert('Cadastro realizado com sucesso! Você já pode fazer login.');
         setIsSignUp(false);
       }
     } catch (error) {
@@ -87,7 +87,7 @@ function App() {
         <div className="bg-white p-8 rounded-lg shadow-md w-96">
           <div className="flex items-center justify-center mb-8">
             <LogIn className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold ml-2">Finance Manager</h1>
+            <h1 className="text-2xl font-bold ml-2">Gerenciador Financeiro</h1>
           </div>
           
           <form onSubmit={handleAuth} className="space-y-4">
@@ -103,7 +103,7 @@ function App() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Password</label>
+              <label className="block text-sm font-medium text-gray-700">Senha</label>
               <input
                 type="password"
                 required
@@ -118,18 +118,18 @@ function App() {
               type="submit"
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+              {isSignUp ? 'Cadastrar' : 'Entrar'}
             </button>
           </form>
 
           <div className="mt-4">
             <p className="text-center text-sm text-gray-600">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isSignUp ? 'Já tem uma conta?' : "Não tem uma conta?"}{' '}
               <button
                 onClick={() => setIsSignUp(!isSignUp)}
                 className="text-blue-600 hover:text-blue-500"
               >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                {isSignUp ? 'Entrar' : 'Cadastrar'}
               </button>
             </p>
           </div>
@@ -145,7 +145,7 @@ function App() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">Finance Manager</h1>
+                <h1 className="text-xl font-bold text-gray-900">Gerenciador Financeiro</h1>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -157,7 +157,7 @@ function App() {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                Dashboard
+                Painel
               </button>
               <button
                 onClick={() => setView('transactions')}
@@ -167,13 +167,13 @@ function App() {
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                Transactions
+                Transações
               </button>
               <button
                 onClick={handleSignOut}
                 className="px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50"
               >
-                Sign Out
+                Sair
               </button>
             </div>
           </div>
