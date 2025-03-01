@@ -44,8 +44,8 @@ export function Dashboard({ transactions }: DashboardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <div className="p-3 bg-green-100 rounded-full">
-              <TrendingUp className="h-6 w-6 text-green-600" />
+            <div className="p-3 bg-[#ff632a] rounded-xl">
+              <TrendingUp className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Renda Total</p>
@@ -58,8 +58,8 @@ export function Dashboard({ transactions }: DashboardProps) {
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <div className="p-3 bg-red-100 rounded-full">
-              <TrendingDown className="h-6 w-6 text-red-600" />
+            <div className="p-3 bg-[#ff632a] rounded-xl">
+              <TrendingDown className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
@@ -74,8 +74,8 @@ export function Dashboard({ transactions }: DashboardProps) {
 
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex items-center">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <DollarSign className="h-6 w-6 text-blue-600" />
+            <div className="p-3 bg-[#ff632a] rounded-xl">
+              <DollarSign className="h-6 w-6 text-white" />
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">Saldo Atual</p>
@@ -101,7 +101,7 @@ export function Dashboard({ transactions }: DashboardProps) {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="amount" fill="#4F46E5" />
+              <Bar dataKey="amount" fill="#545454" />
             </BarChart>
           </ResponsiveContainer>
         </div>
