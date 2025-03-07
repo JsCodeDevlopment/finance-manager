@@ -3,6 +3,7 @@ import { LogIn, LogOut } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import logo from "../public/logo.png";
 import { Dashboard } from "./components/Dashboard";
+import { ImportTransactions } from "./components/ImportTransactions";
 import { MonthSelector } from "./components/MonthSelector";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
@@ -17,6 +18,7 @@ function App() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -170,7 +172,7 @@ function App() {
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between gap-5 py-4 flex-wrap max-[415px]:justify-center">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <img src={logo} alt="Logo" className="w-32" />
@@ -213,6 +215,16 @@ function App() {
           selectedMonth={selectedMonth}
           onMonthChange={setSelectedMonth}
         />
+        {view === "transactions" && (
+          <div className="flex mb-5 w-full justify-end">
+            <button
+              onClick={() => setIsImportOpen(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-[#ff632a] rounded-md hover:bg-gray-300 hover:text-black"
+            >
+              Importar Transações
+            </button>
+          </div>
+        )}
         <div className="space-y-8">
           {view === "dashboard" ? (
             <Dashboard transactions={transactions} />
@@ -230,6 +242,12 @@ function App() {
           )}
         </div>
       </main>
+      <ImportTransactions
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        selectedMonth={selectedMonth}
+        onTransactionsImported={fetchTransactions}
+      />
     </div>
   );
 }
