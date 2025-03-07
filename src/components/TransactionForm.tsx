@@ -1,17 +1,22 @@
-import React, { useState } from "react";
+import { format } from "date-fns";
 import { PlusCircle } from "lucide-react";
+import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
 
 interface TransactionFormProps {
   onTransactionAdded: () => void;
+  selectedMonth: Date;
 }
 
-export function TransactionForm({ onTransactionAdded }: TransactionFormProps) {
+export function TransactionForm({
+  onTransactionAdded,
+  selectedMonth,
+}: TransactionFormProps) {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(format(selectedMonth, 'yyyy-MM-dd'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

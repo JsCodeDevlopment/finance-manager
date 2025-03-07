@@ -1,10 +1,12 @@
+import { endOfMonth, format, startOfMonth } from "date-fns";
+import { LogIn, LogOut } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { supabase } from "./lib/supabase";
+import logo from "../public/logo.png";
+import { Dashboard } from "./components/Dashboard";
+import { MonthSelector } from "./components/MonthSelector";
 import { TransactionForm } from "./components/TransactionForm";
 import { TransactionList } from "./components/TransactionList";
-import { Dashboard } from "./components/Dashboard";
-import { LogIn, LogOut } from "lucide-react";
-import logo from "../public/logo.png";
+import { supabase } from "./lib/supabase";
 
 function App() {
   const [transactions, setTransactions] = useState([]);
@@ -14,6 +16,7 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,10 +31,21 @@ function App() {
     });
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      fetchTransactions();
+    }
+  }, [selectedMonth]);
+
   const fetchTransactions = async () => {
+    const startDate = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
+    const endDate = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+
     const { data } = await supabase
       .from("transactions")
       .select("*")
+      .gte("due_date", startDate)
+      .lte("due_date", endDate)
       .order("due_date", { ascending: true });
 
     if (data) {
@@ -195,12 +209,19 @@ function App() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <MonthSelector
+          selectedMonth={selectedMonth}
+          onMonthChange={setSelectedMonth}
+        />
         <div className="space-y-8">
           {view === "dashboard" ? (
             <Dashboard transactions={transactions} />
           ) : (
             <div className="space-y-8">
-              <TransactionForm onTransactionAdded={fetchTransactions} />
+              <TransactionForm
+                onTransactionAdded={fetchTransactions}
+                selectedMonth={selectedMonth}
+              />
               <TransactionList
                 transactions={transactions}
                 onTransactionUpdated={fetchTransactions}
