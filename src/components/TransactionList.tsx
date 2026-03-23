@@ -241,12 +241,12 @@ export function TransactionList({
           filteredAndSortedTransactions.map((transaction) => (
             <div 
               key={transaction.id} 
-              className={`group bg-white/5 backdrop-blur-3xl p-6 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-8 items-center overflow-hidden relative ${editingId === transaction.id ? 'border-[#ff632a] bg-white/10' : 'border-white/5 hover:border-white/10 hover:bg-white/[0.07]'}`}
+              className={`group bg-white/5 backdrop-blur-3xl p-6 lg:px-8 rounded-3xl border transition-all duration-500 flex flex-col lg:grid lg:grid-cols-[1fr_120px_160px_220px] gap-6 lg:gap-8 items-center overflow-hidden relative ${editingId === transaction.id ? 'border-[#ff632a] bg-white/10' : 'border-white/5 hover:border-white/10 hover:bg-white/[0.07]'}`}
             >
               <div className={`absolute top-0 left-0 w-1.5 h-full ${transaction.type === 'income' ? 'bg-emerald-500/30' : 'bg-rose-500/30'} transition-all`} />
 
               {editingId === transaction.id ? (
-                <div className="w-full flex flex-col gap-8 animate-in slide-in-from-top-2">
+                <div className="lg:col-span-4 w-full flex flex-col gap-8 animate-in slide-in-from-top-2">
                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                       <div className="space-y-2">
                           <label className="text-[10px] font-bold uppercase text-slate-500 ml-1 tracking-widest">Fluxo</label>
@@ -309,84 +309,85 @@ export function TransactionList({
                 </div>
               ) : (
                 <>
-                  {/* Basic Info */}
-                  <div className="flex items-center gap-6 flex-1 w-full relative z-10">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 shadow-inner transition-transform duration-500 group-hover:scale-105 ${transaction.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                        {transaction.type === 'income' ? <ChevronUp size={28} /> : <ChevronDown size={28} />}
+                  {/* Basic Info: Icon + Description + Metadata */}
+                  <div className="flex items-center gap-5 w-full relative z-10 min-w-0">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 shadow-inner transition-all duration-500 group-hover:scale-105 ${transaction.type === 'income' ? 'bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-500 group-hover:bg-rose-500/20'}`}>
+                        {transaction.type === 'income' ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-lg font-bold text-white tracking-tight leading-none mb-3 truncate group-hover:text-[#ff632a] transition-colors uppercase outline-none">{transaction.description}</p>
-                      <div className="flex flex-wrap items-center gap-3">
-                         <span className="p-1 px-3 bg-white/5 text-[9px] text-slate-500 rounded-lg font-bold uppercase tracking-widest flex items-center gap-2 border border-white/5">
-                            <Tag size={12} /> {transaction.category}
+                      <p className="text-sm font-bold text-white tracking-tight leading-none mb-2.5 truncate group-hover:text-[#ff632a] transition-colors uppercase">{transaction.description}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                         <span className="p-0.5 px-2 bg-white/5 text-[8px] text-slate-500 rounded-lg font-bold uppercase tracking-widest flex items-center gap-1.5 border border-white/5">
+                            <Tag size={10} /> {transaction.category}
                          </span>
                          {transaction.reservation_id && (
-                           <span className="p-1 px-3 bg-[#ff632a]/10 text-[9px] text-[#ff632a] rounded-lg font-bold uppercase tracking-widest flex items-center gap-2 border border-[#ff632a]/20">
-                              <ShoppingBag size={12} /> {reservations.find(r => r.id === transaction.reservation_id)?.name || "Reserva"}
+                           <span className="p-0.5 px-2 bg-[#ff632a]/10 text-[8px] text-[#ff632a] rounded-lg font-bold uppercase tracking-widest flex items-center gap-1.5 border border-[#ff632a]/20">
+                              <ShoppingBag size={10} /> {reservations.find(r => r.id === transaction.reservation_id)?.name || "Reserva"}
                            </span>
                          )}
-                         <span className="p-1 px-3 bg-white/5 text-[9px] text-slate-600 rounded-lg font-bold tracking-widest flex items-center gap-2 lg:hidden">
-                            <Calendar size={12} /> 
+                         <span className="p-0.5 px-2 bg-white/5 text-[8px] text-slate-600 rounded-lg font-bold tracking-widest flex items-center gap-1.5 lg:hidden">
+                            <Calendar size={10} /> 
                             {format(new Date(transaction.due_date), "dd/MM", { locale: ptBR })}
                          </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Date - Desktop Only */}
-                  <div className="hidden lg:flex flex-col items-center gap-1.5 min-w-[120px] relative z-10 px-8 border-x border-white/5">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-600">Data</p>
-                      <p className="text-sm font-bold text-slate-400 flex items-center gap-2">
-                        {format(new Date(transaction.due_date), "dd MMM", { locale: ptBR })}
+                  {/* Date - Desktop Column */}
+                  <div className="hidden lg:flex flex-col items-start gap-1 relative z-10 px-4 border-l border-white/5">
+                      <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-600">Execução</p>
+                      <p className="text-xs font-bold text-slate-400">
+                        {format(new Date(transaction.due_date), "dd MMM yyyy", { locale: ptBR })}
                       </p>
                   </div>
 
-                  {/* Status Interaction */}
-                  <div className="min-w-[140px] flex items-center justify-center relative z-10 px-4">
+                  {/* Status Interaction - Desktop Column */}
+                  <div className="flex items-center justify-center lg:justify-start relative z-10 w-full lg:w-auto">
                     <button
                       onClick={() => togglePaid(transaction.id, transaction.is_paid)}
-                      className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-[9px] font-bold uppercase tracking-[0.25em] transition-all duration-300 transform active:scale-95 border ${
+                      className={`flex-1 lg:flex-none flex items-center justify-center gap-2 px-6 lg:px-5 py-3 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] transition-all duration-300 transform active:scale-95 border ${
                         transaction.is_paid
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-lg shadow-emerald-500/5 focus:ring-1 focus:ring-emerald-500"
-                          : "bg-[#ff632a]/10 text-[#ff632a] border-[#ff632a]/20 shadow-lg shadow-orange-500/5 focus:ring-1 focus:ring-[#ff632a]"
+                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/10 hover:bg-emerald-500 hover:text-white"
+                          : "bg-[#ff632a]/10 text-[#ff632a] border-[#ff632a]/10 hover:bg-[#ff632a] hover:text-white"
                       }`}
                     >
                       {transaction.is_paid ? (
-                        <><CheckCircle2 size={14} /> Liquidado</>
+                        <CheckCircle2 size={12} />
                       ) : (
-                        <><Clock size={14} /> Aberto</>
+                        <Clock size={12} />
                       )}
+                      <span>{transaction.is_paid ? 'Liquidado' : 'Aberto'}</span>
                     </button>
                   </div>
 
-                  {/* Amount and Actions */}
-                  <div className="flex items-center gap-10 min-w-[220px] justify-end relative z-10">
-                    <div className="text-right">
-                      <p className={`text-xl font-bold tracking-tight ${transaction.type === 'income' ? 'text-emerald-400 text-2xl font-black' : 'text-white'}`}>
+                  {/* Amount and Actions - Desktop Column */}
+                  <div className="flex items-center justify-between lg:justify-end gap-6 w-full lg:w-auto relative z-10">
+                    <div className="text-left lg:text-right">
+                      <p className={`text-base lg:text-lg font-bold tracking-tight ${transaction.type === 'income' ? 'text-emerald-400 lg:text-xl font-black' : 'text-white'}`}>
                          {transaction.type === 'income' ? '+' : '-'} {formatCurrency(transaction.amount)}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+                    <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
                       <button
                         onClick={() => startEdit(transaction)}
-                        className="p-3 bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white rounded-xl transition-all border border-blue-500/10"
-                        title="Ajustar"
+                        className="p-2.5 bg-white/5 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all border border-white/5"
+                        title="Editar"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(transaction.id)}
-                        className="p-3 bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl transition-all border border-rose-500/10"
-                        title="Remover"
+                        className="p-2.5 bg-rose-500/5 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all border border-white/5"
+                        title="Excluir"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                     
-                    <div className="block group-hover:hidden transition-all opacity-20">
-                       <MoreVertical size={20} className="text-white" />
+                    <div className="block lg:hidden group-hover:hidden transition-all opacity-20">
+                       <MoreVertical size={18} className="text-white" />
                     </div>
                   </div>
                 </>
