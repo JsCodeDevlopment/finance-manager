@@ -22,6 +22,7 @@ export function TransactionsPage() {
     const { data } = await supabase
       .from("transactions")
       .select("*")
+      .is("reservation_id", null)
       .gte("due_date", startDate)
       .lte("due_date", endDate)
       .order("due_date", { ascending: true });

@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { WalletCards, Plus, Minus, Info, Trash2, PieChart, TrendingDown, Clock } from "lucide-react";
+import { WalletCards, Plus, Minus, Info, Trash2, PieChart, TrendingDown, Clock, PlusCircle, Edit2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { formatCurrency } from "../helpers/currency-formater";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Transaction } from "../types";
 
 interface Reservation {
   id: string;
@@ -12,14 +13,30 @@ interface Reservation {
   spent_amount: number;
   remaining_amount: number;
   created_at: string;
+  transactions?: Transaction[];
 }
 
 export function MoneyUsagePage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [expenseFormReservationId, setExpenseFormReservationId] = useState<string | null>(null);
+  
+  // Reservation form state
   const [newName, setNewName] = useState("");
   const [newTotal, setNewTotal] = useState("");
+
+  // Quick Expense form state
+  const [expenseDescription, setExpenseDescription] = useState("");
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [isSubmittingExpense, setIsSubmittingExpense] = useState(false);
+
+  // Edit Transaction state
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    description: "",
+    amount: ""
+  });
 
   const fetchReservations = useCallback(async () => {
     setLoading(true);
@@ -39,17 +56,19 @@ export function MoneyUsagePage() {
     // Get all transactions linked to reservations to calculate spent amount
     const { data: transData } = await supabase
       .from("transactions")
-      .select("amount, reservation_id")
-      .not("reservation_id", "is", null);
+      .select("*")
+      .not("reservation_id", "is", null)
+      .order("due_date", { ascending: false });
 
     const reservationsWithStats = resData?.map((res: Reservation) => {
-      const spent = transData?.filter((t: { amount: number, reservation_id: string }) => t.reservation_id === res.id)
-        .reduce((sum: number, t: { amount: number }) => sum + t.amount, 0) || 0;
+      const relatedTransactions = transData?.filter((t: Transaction) => t.reservation_id === res.id) || [];
+      const spent = relatedTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0) || 0;
       
       return {
         ...res,
         spent_amount: spent,
-        remaining_amount: res.total_amount - spent
+        remaining_amount: res.total_amount - spent,
+        transactions: relatedTransactions
       };
     }) || [];
 
@@ -106,6 +125,83 @@ export function MoneyUsagePage() {
     
     const { error } = await supabase.from("reservations").delete().eq("id", id);
     if (!error) fetchReservations();
+  };
+
+  const handleQuickExpense = async (res: Reservation) => {
+    if (!expenseAmount || !expenseDescription) {
+      alert("Informe a descrição e o valor do gasto.");
+      return;
+    }
+
+    setIsSubmittingExpense(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase.from("transactions").insert([{
+        user_id: user.id,
+        type: "expense",
+        description: expenseDescription,
+        amount: parseFloat(expenseAmount),
+        category: res.name,
+        reservation_id: res.id,
+        due_date: format(new Date(), 'yyyy-MM-dd'),
+        is_paid: true
+      }]);
+
+      if (error) {
+        alert("Erro ao registrar gasto: " + error.message);
+      } else {
+        setExpenseAmount("");
+        setExpenseDescription("");
+        setExpenseFormReservationId(null);
+        await fetchReservations();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmittingExpense(false);
+    }
+  };
+
+  const startEditTransaction = (t: Transaction) => {
+    setEditingTransactionId(t.id);
+    setEditForm({
+      description: t.description,
+      amount: t.amount.toString()
+    });
+  };
+
+  const handleUpdateTransaction = async (id: string) => {
+    const { error } = await supabase
+      .from("transactions")
+      .update({
+        description: editForm.description,
+        amount: parseFloat(editForm.amount)
+      })
+      .eq("id", id);
+
+    if (!error) {
+      setEditingTransactionId(null);
+      await fetchReservations();
+    } else {
+      alert("Erro ao atualizar: " + error.message);
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!window.confirm("Tem certeza que deseja excluir este gasto?")) return;
+    
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("id", id);
+
+    if (!error) {
+      await fetchReservations();
+    } else {
+      alert("Erro ao excluir: " + error.message);
+    }
   };
 
   return (
@@ -246,13 +342,132 @@ export function MoneyUsagePage() {
                    </div>
                 </div>
 
-                {/* Info Text */}
-                <p className="mt-8 text-[10px] text-slate-600 font-bold border-t border-white/5 pt-6 text-center tracking-normal">
-                  Vincule transações de saída a este pote para atualizar o saldo operacional.
-                </p>
+                <div className="mt-8 pt-8 border-t border-white/5 relative z-10">
+                  {expenseFormReservationId === res.id ? (
+                    <div className="space-y-4 animate-in slide-in-from-top-2 bg-black/40 p-6 rounded-2xl border border-white/5">
+                       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ff632a] mb-2">Novo Gasto no Pote</p>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <input 
+                            type="text"
+                            placeholder="Descrição (ex: Gasolina)"
+                            value={expenseDescription}
+                            onChange={(e) => setExpenseDescription(e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded-xl p-4 text-sm font-bold text-white outline-none focus:border-[#ff632a] placeholder:text-slate-700 transition-all"
+                          />
+                          <input 
+                            type="number"
+                            placeholder="Valor R$ 0,00"
+                            value={expenseAmount}
+                            onChange={(e) => setExpenseAmount(e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded-xl p-4 text-sm font-bold text-white outline-none focus:border-[#ff632a] placeholder:text-slate-700 transition-all"
+                          />
+                       </div>
+                       <div className="flex gap-3">
+                          <button 
+                            disabled={isSubmittingExpense}
+                            onClick={() => handleQuickExpense(res)}
+                            className="flex-1 h-14 bg-[#ff632a] text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-[#ff632a]/80 transition-all disabled:opacity-50 shadow-xl shadow-orange-500/20"
+                          >
+                            {isSubmittingExpense ? 'Wait...' : 'Confirmar Lançamento'}
+                          </button>
+                          <button 
+                            onClick={() => setExpenseFormReservationId(null)}
+                            className="px-6 h-14 bg-white/5 text-slate-500 text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/10 hover:text-white transition-all border border-white/5"
+                          >
+                            X
+                          </button>
+                       </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setExpenseFormReservationId(res.id)}
+                      className="w-full h-16 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2em] text-white hover:bg-[#ff632a] hover:border-[#ff632a] transition-all flex items-center justify-center gap-4 group/btn shadow-inner"
+                    >
+                      <PlusCircle size={20} className="text-[#ff632a] group-hover/btn:text-white transition-colors" />
+                      <span>Lançar Gasto neste Pote</span>
+                    </button>
+                  )}
+                </div>
 
                 {/* Background Decor */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff632a]/5 rounded-full blur-[60px] group-hover:bg-[#ff632a]/10 transition-all duration-1000 -z-10"></div>
+
+                {/* Transaction List for this specific reservation */}
+                {res.transactions && res.transactions.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-white/5 relative z-10 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-6 flex items-center gap-2">
+                       Histórico de Utilização
+                       <span className="bg-white/5 px-2 py-0.5 rounded text-white">{res.transactions.length}</span>
+                    </p>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                      {res.transactions.map((t: Transaction) => (
+                        <div key={t.id} className="group/item relative bg-black/20 p-4 rounded-xl border border-white/5 hover:border-white/10 transition-all">
+                           {editingTransactionId === t.id ? (
+                             <div className="space-y-3 animate-in slide-in-from-top-1">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                   <input 
+                                     type="text"
+                                     value={editForm.description}
+                                     onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                                     className="bg-black/40 border border-[#ff632a]/30 rounded-lg p-2 text-xs font-bold text-white outline-none"
+                                   />
+                                   <input 
+                                     type="number"
+                                     value={editForm.amount}
+                                     onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+                                     className="bg-black/40 border border-[#ff632a]/30 rounded-lg p-2 text-xs font-bold text-white outline-none"
+                                   />
+                                </div>
+                                <div className="flex gap-2">
+                                   <button 
+                                     onClick={() => handleUpdateTransaction(t.id)}
+                                     className="flex-1 bg-white text-black text-[9px] font-bold uppercase py-2 rounded-lg hover:bg-[#ff632a] hover:text-white transition-all"
+                                   >
+                                     Salvar
+                                   </button>
+                                   <button 
+                                     onClick={() => setEditingTransactionId(null)}
+                                     className="px-4 bg-white/5 text-slate-500 text-[9px] font-bold uppercase py-2 rounded-lg hover:text-white transition-all"
+                                   >
+                                     Cancelar
+                                   </button>
+                                </div>
+                             </div>
+                           ) : (
+                             <div className="flex justify-between items-center group/content">
+                                <div className="flex items-center gap-4">
+                                   <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center">
+                                      <TrendingDown size={14} />
+                                   </div>
+                                   <div>
+                                      <p className="text-xs font-bold text-white tracking-tight">{t.description}</p>
+                                      <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">{format(new Date(t.due_date), 'dd MMM yyyy', { locale: ptBR })}</p>
+                                   </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                   <p className="text-sm font-bold text-white tracking-tight">-{formatCurrency(t.amount)}</p>
+                                   <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-all translate-x-4 group-hover/item:translate-x-0">
+                                      <button 
+                                        onClick={() => startEditTransaction(t)}
+                                        className="p-1.5 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                                      >
+                                        <Edit2 size={12} />
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteTransaction(t.id)}
+                                        className="p-1.5 text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                   </div>
+                                </div>
+                             </div>
+                           )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )
