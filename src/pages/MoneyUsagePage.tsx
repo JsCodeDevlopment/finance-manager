@@ -63,21 +63,41 @@ export function MoneyUsagePage() {
 
   const handleAddReservation = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data: { user } } = await supabase.auth.getUser();
+    setLoading(true);
     
-    if (!user) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        alert("Sessão expirada. Faça login novamente.");
+        return;
+      }
 
-    const { error } = await supabase.from("reservations").insert([{
-      user_id: user.id,
-      name: newName,
-      total_amount: parseFloat(newTotal)
-    }]);
+      if (!newTotal || isNaN(parseFloat(newTotal))) {
+        alert("Informe um valor total válido.");
+        return;
+      }
 
-    if (!error) {
-      setNewName("");
-      setNewTotal("");
-      setShowAddForm(false);
-      fetchReservations();
+      const { error } = await supabase.from("reservations").insert([{
+        user_id: user.id,
+        name: newName,
+        total_amount: parseFloat(newTotal)
+      }]);
+
+      if (error) {
+        console.error("Supabase Error:", error);
+        alert(`Erro ao criar reserva: ${error.message} (${error.code})`);
+      } else {
+        setNewName("");
+        setNewTotal("");
+        setShowAddForm(false);
+        await fetchReservations();
+      }
+    } catch (err: unknown) {
+      console.error("Internal Error:", err);
+      alert("Ocorreu um erro interno ao processar a reserva.");
+    } finally {
+      setLoading(false);
     }
   };
 
