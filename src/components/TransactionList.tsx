@@ -24,6 +24,7 @@ import { Transaction } from "../types";
 interface TransactionListProps {
   transactions: Transaction[];
   onTransactionUpdated: () => void;
+  selectedMonth: Date;
 }
 
 interface Reservation {
@@ -34,6 +35,7 @@ interface Reservation {
 export function TransactionList({
   transactions,
   onTransactionUpdated,
+  selectedMonth,
 }: TransactionListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -57,10 +59,15 @@ export function TransactionList({
 
   useEffect(() => {
     fetchReservations();
-  }, []);
+  }, [selectedMonth]);
 
   const fetchReservations = async () => {
-    const { data } = await supabase.from("reservations").select("id, name");
+    const monthStr = format(selectedMonth, 'yyyy-MM-01');
+    const { data } = await supabase
+      .from("reservations")
+      .select("id, name")
+      .eq("month_date", monthStr);
+    
     if (data) setReservations(data);
   };
 

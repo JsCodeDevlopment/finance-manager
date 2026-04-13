@@ -119,6 +119,7 @@ export function TransactionsPage() {
                 <TransactionList
                     transactions={transactions}
                     onTransactionUpdated={fetchTransactions}
+                    selectedMonth={selectedMonth}
                 />
             )}
         </div>

@@ -28,12 +28,14 @@ export function TransactionForm({
 
   useEffect(() => {
     fetchReservations();
-  }, []);
+  }, [selectedMonth]);
 
   const fetchReservations = async () => {
+    const monthStr = format(selectedMonth, 'yyyy-MM-01');
     const { data } = await supabase
       .from("reservations")
       .select("id, name")
+      .eq("month_date", monthStr)
       .order("name");
     
     if (data) {

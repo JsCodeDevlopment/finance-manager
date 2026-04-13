@@ -1,5 +1,6 @@
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MonthSelector } from "../components/MonthSelector";
 import {
   ChevronDown,
   ChevronUp,
@@ -13,6 +14,8 @@ import {
   Trash2,
   TrendingDown,
   WalletCards,
+  History,
+  Download,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -44,6 +47,9 @@ export function MoneyUsagePage() {
   const [expenseFormReservationId, setExpenseFormReservationId] = useState<
     string | null
   >(null);
+  const [selectedMonth, setSelectedMonth] = useState(startOfMonth(new Date()));
+  const [isImporting, setIsImporting] = useState(false);
+  const [pastReservations, setPastReservations] = useState<Reservation[]>([]);
   const [expandedHistory, setExpandedHistory] = useState<
     Record<string, boolean>
   >({});
@@ -67,12 +73,13 @@ export function MoneyUsagePage() {
   });
 
   const fetchReservations = useCallback(async () => {
-    setLoading(true);
+    // Get reservations for the selected month
+    const monthStr = format(selectedMonth, "yyyy-MM-01");
 
-    // Get all reservations
     const { data: resData, error: resError } = await supabase
       .from("reservations")
       .select("*")
+      .eq("month_date", monthStr)
       .order("created_at", { ascending: false });
 
     if (resError) {
@@ -113,7 +120,7 @@ export function MoneyUsagePage() {
 
   useEffect(() => {
     fetchReservations();
-  }, [fetchReservations]);
+  }, [fetchReservations, selectedMonth]);
 
   const handleAddReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,6 +146,7 @@ export function MoneyUsagePage() {
           user_id: user.id,
           name: newName,
           total_amount: parseFloat(newTotal),
+          month_date: format(selectedMonth, "yyyy-MM-01"),
         },
       ]);
 
@@ -249,6 +257,49 @@ export function MoneyUsagePage() {
     }
   };
 
+  const openImportModal = async () => {
+    setLoading(true);
+    const prevMonth = subMonths(selectedMonth, 1);
+    const prevMonthStr = format(prevMonth, "yyyy-MM-01");
+
+    const { data } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("month_date", prevMonthStr);
+
+    if (data) {
+      // Filter out reservations that already exist in current month by name
+      const currentNames = reservations.map(r => r.name);
+      const availableToImport = data.filter(r => !currentNames.includes(r.name));
+      setPastReservations(availableToImport);
+      setIsImporting(true);
+    }
+    setLoading(false);
+  };
+
+  const handleImportReservations = async (toImport: Reservation[]) => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const newEntries = toImport.map(r => ({
+      user_id: user.id,
+      name: r.name,
+      total_amount: r.total_amount,
+      month_date: format(selectedMonth, "yyyy-MM-01")
+    }));
+
+    const { error } = await supabase.from("reservations").insert(newEntries);
+
+    if (!error) {
+      setIsImporting(false);
+      await fetchReservations();
+    } else {
+      alert("Erro ao importar: " + error.message);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="space-y-12 animate-in fade-in duration-700 relative">
       {/* Header section */}
@@ -263,17 +314,26 @@ export function MoneyUsagePage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className={`flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all shadow-2xl uppercase text-[10px] tracking-widest border border-white/5 active:scale-95 ${
-            showAddForm
-              ? "bg-white/5 text-slate-500"
-              : "bg-[#ff632a] text-white shadow-orange-500/20"
-          }`}
-        >
-          {showAddForm ? <Minus size={18} /> : <Plus size={18} />}
-          <span>{showAddForm ? "Cancelar" : "Nova Reserva"}</span>
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6">
+          <div className="bg-white/5 backdrop-blur-md px-6 py-2 rounded-2xl border border-white/10 shadow-2xl">
+            <MonthSelector
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+            />
+          </div>
+
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className={`flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all shadow-2xl uppercase text-[10px] tracking-widest border border-white/5 active:scale-95 ${
+              showAddForm
+                ? "bg-white/5 text-slate-500"
+                : "bg-[#ff632a] text-white shadow-orange-500/20"
+            }`}
+          >
+            {showAddForm ? <Minus size={18} /> : <Plus size={18} />}
+            <span>{showAddForm ? "Cancelar" : "Nova Reserva"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Add Form */}
@@ -376,17 +436,26 @@ export function MoneyUsagePage() {
           <div className="md:col-span-2 bg-white/5 border-2 border-dashed border-white/10 rounded-3xl p-20 text-center">
             <WalletCards size={48} className="mx-auto text-slate-700 mb-6" />
             <h3 className="text-xl font-bold text-slate-500 mb-2">
-              Nenhum aporte identificado.
+              Mês operacional sem caixinhas.
             </h3>
             <p className="text-slate-600 mb-10 text-sm max-w-xs mx-auto">
-              Segregue seu capital para monitorar metas e consumos específicos.
+              Você pode iniciar uma nova do zero ou importar as configurações do mês anterior.
             </p>
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="px-10 py-4 border border-[#ff632a] text-[#ff632a] rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a] hover:text-white transition-all"
-            >
-              Consolidar Primeiro Pote
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="w-full sm:w-auto px-10 py-4 bg-[#ff632a] text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a]/80 transition-all"
+              >
+                Nova do Zero
+              </button>
+              <button
+                onClick={openImportModal}
+                className="w-full sm:w-auto px-10 py-4 border border-white/10 text-slate-400 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-white/5 hover:text-white transition-all flex items-center justify-center gap-2"
+              >
+                <Download size={16} />
+                Importar Anterior
+              </button>
+            </div>
           </div>
         ) : (
           reservations.map((res) => (
@@ -704,6 +773,59 @@ export function MoneyUsagePage() {
           ))
         )}
       </div>
+
+      {/* Import Modal */}
+      {isImporting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsImporting(false)}></div>
+          <div className="relative bg-[#020617] w-full max-w-2xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-10 border-b border-white/5">
+              <div className="flex items-center gap-4 mb-2">
+                <History className="text-[#ff632a]" />
+                <h3 className="text-2xl font-bold text-white tracking-tight">Restauração Patrimonial</h3>
+              </div>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Selecione as caixinhas que deseja renovar para este mês.</p>
+            </div>
+
+            <div className="p-6 max-h-[400px] overflow-y-auto custom-scrollbar">
+              {pastReservations.length === 0 ? (
+                <div className="py-20 text-center">
+                  <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">Nenhum registro encontrado no mÃªs anterior.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {pastReservations.map(res => (
+                    <div key={res.id} className="bg-white/5 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-[#ff632a]/30 transition-all">
+                      <div>
+                        <p className="text-white font-bold group-hover:text-[#ff632a] transition-colors">{res.name}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor Reservado: {formatCurrency(res.total_amount)}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleImportReservations([res])}
+                        className="p-3 bg-white/5 text-slate-400 rounded-xl hover:bg-[#ff632a] hover:text-white transition-all active:scale-95"
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="mt-8">
+                    <button 
+                      onClick={() => handleImportReservations(pastReservations)}
+                      className="w-full py-4 bg-white text-black rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a] hover:text-white transition-all"
+                    >
+                      Importar Todas as {pastReservations.length} Caixinhas
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-8 bg-black/40 text-center">
+               <button onClick={() => setIsImporting(false)} className="text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-all">Fechar Assistente</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
