@@ -4,6 +4,7 @@ import {
   ReceiptText,
   User,
   WalletCards,
+  CreditCard,
 } from "lucide-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -42,6 +43,11 @@ export function AppLayout() {
       label: "Uso do Dinheiro",
       path: "/money-usage",
       icon: <WalletCards size={20} />,
+    },
+    {
+      label: "Cartões de Crédito",
+      path: "/credit-cards",
+      icon: <CreditCard size={20} />,
     },
   ];
 

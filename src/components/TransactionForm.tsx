@@ -1,6 +1,17 @@
-import { format } from "date-fns";
-import { PlusCircle, Wallet, FileText, Tag, Calendar, ArrowUpCircle, ArrowDownCircle, ShoppingBag } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { addMonths, format } from "date-fns";
+import { parseSafeDate, formatDisplayDate, addMonthsSafe } from "../helpers/date-utils";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Calendar,
+  CreditCard,
+  FileText,
+  PlusCircle,
+  ShoppingBag,
+  Tag,
+  Wallet,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 interface TransactionFormProps {
@@ -13,6 +24,11 @@ interface Reservation {
   name: string;
 }
 
+interface CreditCard {
+  id: string;
+  name: string;
+}
+
 export function TransactionForm({
   onTransactionAdded,
   selectedMonth,
@@ -21,23 +37,40 @@ export function TransactionForm({
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
-  const [dueDate, setDueDate] = useState(format(selectedMonth, 'yyyy-MM-dd'));
+  const [dueDate, setDueDate] = useState(format(selectedMonth, "yyyy-MM-dd"));
   const [reservationId, setReservationId] = useState<string>("");
+  const [creditCardId, setCreditCardId] = useState<string>("");
+  const [installments, setInstallments] = useState("1");
+  const [startInstallment, setStartInstallment] = useState("1");
+  const [amountMode, setAmountMode] = useState<"total" | "unit">("unit");
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchReservations();
+    fetchCreditCards();
   }, [selectedMonth]);
 
+  const fetchCreditCards = async () => {
+    const { data } = await supabase
+      .from("credit_cards")
+      .select("id, name")
+      .order("name");
+
+    if (data) {
+      setCreditCards(data);
+    }
+  };
+
   const fetchReservations = async () => {
-    const monthStr = format(selectedMonth, 'yyyy-MM-01');
+    const monthStr = format(selectedMonth, "yyyy-MM-01");
     const { data } = await supabase
       .from("reservations")
       .select("id, name")
       .eq("month_date", monthStr)
       .order("name");
-    
+
     if (data) {
       setReservations(data);
     }
@@ -48,24 +81,73 @@ export function TransactionForm({
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("transactions").insert([
-        {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const numInstallments = parseInt(installments) || 1;
+      const startInst = parseInt(startInstallment) || 1;
+      const baseAmount = parseFloat(amount);
+      const amountPerInstallment = amountMode === "total" ? baseAmount / numInstallments : baseAmount;
+      const installmentGroupId = numInstallments > 1 ? crypto.randomUUID() : null;
+
+      const transactionsToInsert = [];
+
+      // Criar parcelas do passado (jÃ¡ pagas)
+      for (let i = 1; i < startInst; i++) {
+        const monthsToSubtract = startInst - i;
+        const pastDateStr = addMonthsSafe(dueDate, -monthsToSubtract);
+        transactionsToInsert.push({
           type,
-          amount: parseFloat(amount),
-          description,
+          amount: amountPerInstallment,
+          description: `${description} (${i}/${numInstallments})`,
           category,
-          due_date: dueDate,
+          due_date: pastDateStr,
           reservation_id: reservationId || null,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-        },
-      ]);
+          credit_card_id: creditCardId || null,
+          installment_number: i,
+          total_installments: numInstallments,
+          installment_group_id: installmentGroupId,
+          user_id: user.id,
+          is_paid: true, // JÃ¡ passou, assume-se paga
+        });
+      }
+
+      // Criar parcela atual e futuras (em aberto)
+      for (let i = startInst; i <= numInstallments; i++) {
+        const monthsToAdd = i - startInst;
+        const nextDateStr = addMonthsSafe(dueDate, monthsToAdd);
+        transactionsToInsert.push({
+          type,
+          amount: amountPerInstallment,
+          description: numInstallments > 1 ? `${description} (${i}/${numInstallments})` : description,
+          category,
+          due_date: nextDateStr,
+          reservation_id: reservationId || null,
+          credit_card_id: creditCardId || null,
+          installment_number: i,
+          total_installments: numInstallments,
+          installment_group_id: installmentGroupId,
+          user_id: user.id,
+          is_paid: type === "income" ? true : false,
+        });
+      }
+
+      const { error } = await supabase
+        .from("transactions")
+        .insert(transactionsToInsert);
+
+      if (error) throw error;
 
       if (!error) {
         setAmount("");
         setDescription("");
         setCategory("");
-        setDueDate(format(selectedMonth, 'yyyy-MM-dd'));
+        setDueDate(format(selectedMonth, "yyyy-MM-dd"));
         setReservationId("");
+        setCreditCardId("");
+        setInstallments("1");
+        setStartInstallment("1");
+        setAmountMode("unit");
         onTransactionAdded();
       } else {
         throw error;
@@ -86,8 +168,8 @@ export function TransactionForm({
           type="button"
           onClick={() => setType("income")}
           className={`flex items-center justify-center gap-3 p-4 rounded-xl font-bold transition-all border-2 text-xs uppercase tracking-widest ${
-            type === "income" 
-              ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-2xl shadow-emerald-500/10" 
+            type === "income"
+              ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-2xl shadow-emerald-500/10"
               : "bg-black/20 border-white/5 text-slate-600 hover:border-white/10 hover:text-slate-400"
           }`}
         >
@@ -98,8 +180,8 @@ export function TransactionForm({
           type="button"
           onClick={() => setType("expense")}
           className={`flex items-center justify-center gap-3 p-4 rounded-xl font-bold transition-all border-2 text-xs uppercase tracking-widest ${
-            type === "expense" 
-              ? "bg-rose-500/10 border-rose-500/50 text-rose-400 shadow-2xl shadow-rose-500/10" 
+            type === "expense"
+              ? "bg-rose-500/10 border-rose-500/50 text-rose-400 shadow-2xl shadow-rose-500/10"
               : "bg-black/20 border-white/5 text-slate-600 hover:border-white/10 hover:text-slate-400"
           }`}
         >
@@ -111,10 +193,10 @@ export function TransactionForm({
       {/* Inputs */}
       <div className="space-y-4">
         <div className="relative group">
-           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
-              <Wallet size={18} />
-           </div>
-           <input
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
+            <Wallet size={18} />
+          </div>
+          <input
             type="number"
             step="0.01"
             required
@@ -126,10 +208,10 @@ export function TransactionForm({
         </div>
 
         <div className="relative group">
-           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
-              <FileText size={18} />
-           </div>
-           <input
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
+            <FileText size={18} />
+          </div>
+          <input
             type="text"
             required
             placeholder="Identificador da Transação"
@@ -142,7 +224,7 @@ export function TransactionForm({
         <div className="grid grid-cols-2 gap-4">
           <div className="relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
-                <Tag size={18} />
+              <Tag size={18} />
             </div>
             <input
               type="text"
@@ -156,7 +238,7 @@ export function TransactionForm({
 
           <div className="relative group">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
-                <Calendar size={18} />
+              <Calendar size={18} />
             </div>
             <input
               type="date"
@@ -168,19 +250,109 @@ export function TransactionForm({
           </div>
         </div>
 
-        {type === 'expense' && (
+        {type === "expense" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
+                <CreditCard size={18} />
+              </div>
+              <select
+                value={creditCardId}
+                onChange={(e) => setCreditCardId(e.target.value)}
+                className="w-full bg-black/20 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white font-bold focus:outline-none focus:border-[#ff632a]/50 focus:bg-black/30 transition-all text-sm outline-none appearance-none"
+              >
+                <option value="" className="bg-[#020617]">
+                  Método: Dinheiro/Pix
+                </option>
+                {creditCards.map((card) => (
+                  <option
+                    key={card.id}
+                    value={card.id}
+                    className="bg-[#020617]"
+                  >
+                    {card.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {creditCardId && (
+              <div className="space-y-4 animate-in zoom-in-95 duration-500">
+                <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setAmountMode("unit")}
+                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === 'unit' ? 'bg-white/10 text-white border border-white/10 shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}
+                  >
+                    Valor p/ Parcela
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAmountMode("total")}
+                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === 'total' ? 'bg-white/10 text-white border border-white/10 shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}
+                  >
+                    Valor Total Compra
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative group">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
+                      <span className="text-[10px] font-black italic">X</span>
+                    </div>
+                    <select
+                      value={installments}
+                      onChange={(e) => setInstallments(e.target.value)}
+                      className="w-full bg-black/20 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white font-bold focus:outline-none focus:border-[#ff632a]/50 focus:bg-black/30 transition-all text-sm outline-none appearance-none"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((n) => (
+                        <option key={n} value={n} className="bg-[#020617]">
+                          {n === 1 ? "À Vista" : `${n} Parcelas`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {parseInt(installments) > 1 && (
+                    <div className="relative group animate-in slide-in-from-right-4">
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
+                        <span className="text-[10px] font-black italic">#</span>
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        max={installments}
+                        value={startInstallment}
+                        onChange={(e) => setStartInstallment(e.target.value)}
+                        placeholder="Início"
+                        className="w-full bg-black/20 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white font-bold placeholder-slate-700 focus:outline-none focus:border-[#ff632a]/50 focus:bg-black/30 transition-all text-sm outline-none"
+                        title="Parcela Inicial"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {type === "expense" && (
           <div className="relative group animate-in slide-in-from-top-2 duration-300">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
-                <ShoppingBag size={18} />
+              <ShoppingBag size={18} />
             </div>
             <select
               value={reservationId}
               onChange={(e) => setReservationId(e.target.value)}
               className="w-full bg-black/20 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white font-bold focus:outline-none focus:border-[#ff632a]/50 focus:bg-black/30 transition-all text-sm outline-none appearance-none"
             >
-              <option value="" className="bg-[#020617]">Pote Patrimonial: Geral</option>
-              {reservations.map(res => (
-                <option key={res.id} value={res.id} className="bg-[#020617]">{res.name}</option>
+              <option value="" className="bg-[#020617]">
+                Pote Patrimonial: Geral
+              </option>
+              {reservations.map((res) => (
+                <option key={res.id} value={res.id} className="bg-[#020617]">
+                  {res.name}
+                </option>
               ))}
             </select>
           </div>

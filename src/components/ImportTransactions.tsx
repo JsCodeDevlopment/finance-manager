@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { Transaction } from "../types";
 import { formatCurrency } from "../helpers/currency-formater";
+import { addMonthsSafe, formatDisplayDate, parseSafeDate } from "../helpers/date-utils";
 
 interface ImportTransactionsProps {
   isOpen: boolean;
@@ -89,7 +90,7 @@ export function ImportTransactions({
           amount: t.amount,
           description: t.description,
           category: t.category,
-          due_date: format(selectedMonth, "yyyy-MM-dd"),
+          due_date: format(selectedMonth, "yyyy-MM-dd"), // selectedMonth jÃ¡ vem como Date do TransactionsPage
           user_id: user.id,
           is_paid: false,
         }));

@@ -6,6 +6,7 @@ import { TransactionForm } from "../components/TransactionForm";
 import { TransactionList } from "../components/TransactionList";
 import { ImportTransactions } from "../components/ImportTransactions";
 import { MonthSelector } from "../components/MonthSelector";
+import { parseSafeDate } from "../helpers/date-utils";
 import { supabase } from "../lib/supabase";
 
 export function TransactionsPage() {
@@ -16,8 +17,13 @@ export function TransactionsPage() {
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
-    const startDate = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
-    const endDate = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+    // Usar o primeiro e último dia do mês selecionado
+    const start = startOfMonth(selectedMonth);
+    const end = endOfMonth(selectedMonth);
+    
+    // Formatar como string literal YYYY-MM-DD para o SQL
+    const startDate = format(start, "yyyy-MM-dd");
+    const endDate = format(end, "yyyy-MM-dd");
 
     const { data } = await supabase
       .from("transactions")

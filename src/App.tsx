@@ -8,6 +8,7 @@ import { ProtectedRoute, PublicRoute } from "./components/AuthGuard";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AppLayout } from "./layouts/AppLayout";
 import { AuthPage } from "./pages/AuthPage";
+import { CreditCardsPage } from "./pages/CreditCardsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LandingPage } from "./pages/LandingPage";
 import { MoneyUsagePage } from "./pages/MoneyUsagePage";
@@ -27,6 +28,7 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/money-usage" element={<MoneyUsagePage />} />
+              <Route path="/credit-cards" element={<CreditCardsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
