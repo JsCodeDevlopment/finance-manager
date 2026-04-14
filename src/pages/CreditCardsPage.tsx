@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import {
   AlertTriangle,
   CreditCard as CardIcon,
@@ -8,11 +9,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { CreditCardCard } from "../components/CreditCardCard";
-import { CreditCardForm } from "../components/CreditCardForm";
 import { CreditCardDetailModal } from "../components/CreditCardDetailModal";
+import { CreditCardForm } from "../components/CreditCardForm";
 import { formatCurrency } from "../helpers/currency-formater";
 import { supabase } from "../lib/supabase";
-import { format } from "date-fns";
 import { CreditCard, Transaction } from "../types";
 
 export function CreditCardsPage() {
@@ -47,9 +47,14 @@ export function CreditCardsPage() {
       const currentMonth = format(new Date(), "yyyy-MM");
 
       const cardsWithDebt = cardsData.map((card: CreditCard) => {
-        const cardTransactions = transData?.filter((t: Transaction) => t.credit_card_id === card.id) || [];
-        
-        const totalDebt = cardTransactions.reduce((sum: number, t: Transaction) => sum + t.amount, 0);
+        const cardTransactions =
+          transData?.filter((t: Transaction) => t.credit_card_id === card.id) ||
+          [];
+
+        const totalDebt = cardTransactions.reduce(
+          (sum: number, t: Transaction) => sum + t.amount,
+          0,
+        );
         const currentBill = cardTransactions
           .filter((t: Transaction) => t.due_date.startsWith(currentMonth))
           .reduce((sum: number, t: Transaction) => sum + t.amount, 0);
@@ -185,7 +190,7 @@ export function CreditCardsPage() {
               Nenhum cartão identificado.
             </h3>
             <p className="text-slate-500 mb-12 text-sm max-w-sm mx-auto font-medium">
-              Centralize a gestÃ£o das suas faturas e limites para ter controle
+              Centralize a gestão das suas faturas e limites para ter controle
               total do seu poder de compra.
             </p>
             <button

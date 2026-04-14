@@ -1,5 +1,4 @@
-import { addMonths, format } from "date-fns";
-import { parseSafeDate, formatDisplayDate, addMonthsSafe } from "../helpers/date-utils";
+import { format } from "date-fns";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -12,6 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { addMonthsSafe } from "../helpers/date-utils";
 import { supabase } from "../lib/supabase";
 
 interface TransactionFormProps {
@@ -87,8 +87,10 @@ export function TransactionForm({
       const numInstallments = parseInt(installments) || 1;
       const startInst = parseInt(startInstallment) || 1;
       const baseAmount = parseFloat(amount);
-      const amountPerInstallment = amountMode === "total" ? baseAmount / numInstallments : baseAmount;
-      const installmentGroupId = numInstallments > 1 ? crypto.randomUUID() : null;
+      const amountPerInstallment =
+        amountMode === "total" ? baseAmount / numInstallments : baseAmount;
+      const installmentGroupId =
+        numInstallments > 1 ? crypto.randomUUID() : null;
 
       const transactionsToInsert = [];
 
@@ -119,7 +121,10 @@ export function TransactionForm({
         transactionsToInsert.push({
           type,
           amount: amountPerInstallment,
-          description: numInstallments > 1 ? `${description} (${i}/${numInstallments})` : description,
+          description:
+            numInstallments > 1
+              ? `${description} (${i}/${numInstallments})`
+              : description,
           category,
           due_date: nextDateStr,
           reservation_id: reservationId || null,
@@ -282,14 +287,14 @@ export function TransactionForm({
                   <button
                     type="button"
                     onClick={() => setAmountMode("unit")}
-                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === 'unit' ? 'bg-white/10 text-white border border-white/10 shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === "unit" ? "bg-white/10 text-white border border-white/10 shadow-lg" : "text-slate-600 hover:text-slate-400"}`}
                   >
                     Valor p/ Parcela
                   </button>
                   <button
                     type="button"
                     onClick={() => setAmountMode("total")}
-                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === 'total' ? 'bg-white/10 text-white border border-white/10 shadow-lg' : 'text-slate-600 hover:text-slate-400'}`}
+                    className={`flex-1 py-2 text-[8px] font-black uppercase tracking-widest rounded-lg transition-all ${amountMode === "total" ? "bg-white/10 text-white border border-white/10 shadow-lg" : "text-slate-600 hover:text-slate-400"}`}
                   >
                     Valor Total Compra
                   </button>
@@ -305,11 +310,13 @@ export function TransactionForm({
                       onChange={(e) => setInstallments(e.target.value)}
                       className="w-full bg-black/20 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white font-bold focus:outline-none focus:border-[#ff632a]/50 focus:bg-black/30 transition-all text-sm outline-none appearance-none"
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map((n) => (
-                        <option key={n} value={n} className="bg-[#020617]">
-                          {n === 1 ? "À Vista" : `${n} Parcelas`}
-                        </option>
-                      ))}
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24].map(
+                        (n) => (
+                          <option key={n} value={n} className="bg-[#020617]">
+                            {n === 1 ? "À Vista" : `${n} Parcelas`}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </div>
 

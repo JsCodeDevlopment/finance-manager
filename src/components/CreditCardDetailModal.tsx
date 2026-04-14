@@ -1,22 +1,18 @@
+import { format, isSameMonth, parseISO, startOfMonth } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
-  X,
+  ArrowUpRight,
   Calendar,
-  DollarSign,
+  CreditCard as CardIcon,
   CheckCircle2,
   Clock,
-  AlertCircle,
   TrendingDown,
-  TrendingUp,
-  CreditCard as CardIcon,
-  ChevronRight,
-  ArrowUpRight,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { formatCurrency } from "../helpers/currency-formater";
 import { supabase } from "../lib/supabase";
 import { CreditCard, Transaction } from "../types";
-import { formatCurrency } from "../helpers/currency-formater";
-import { format, isFuture, isPast, parseISO, startOfMonth, isSameMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface CreditCardDetailModalProps {
   card: CreditCard;
@@ -61,7 +57,7 @@ export function CreditCardDetailModal({
           if (!grouped[monthKey]) {
             const dueDate = parseISO(t.due_date);
             const invoiceMonthStart = startOfMonth(dueDate);
-            
+
             let status: "future" | "current" | "past" = "current";
             if (isSameMonth(invoiceMonthStart, currentMonthStart)) {
               status = "current";
@@ -243,14 +239,20 @@ export function CreditCardDetailModal({
                       }`}
                     >
                       <div className="flex items-center gap-6">
-                        <div className={`p-4 rounded-2xl ${
-                          inv.isPaid 
-                            ? "bg-emerald-500/10 text-emerald-500" 
-                            : inv.status === 'future' 
-                              ? "bg-blue-500/10 text-blue-500"
-                              : "bg-rose-500/10 text-rose-500"
-                        }`}>
-                          {inv.isPaid ? <CheckCircle2 size={24} /> : <Clock size={24} />}
+                        <div
+                          className={`p-4 rounded-2xl ${
+                            inv.isPaid
+                              ? "bg-emerald-500/10 text-emerald-500"
+                              : inv.status === "future"
+                                ? "bg-blue-500/10 text-blue-500"
+                                : "bg-rose-500/10 text-rose-500"
+                          }`}
+                        >
+                          {inv.isPaid ? (
+                            <CheckCircle2 size={24} />
+                          ) : (
+                            <Clock size={24} />
+                          )}
                         </div>
                         <div>
                           <p className="text-lg font-bold text-white capitalize leading-none mb-1">
@@ -260,11 +262,17 @@ export function CreditCardDetailModal({
                           </p>
                           <div className="flex items-center gap-3">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                              {inv.status === "current" ? "Fatura Atual" : inv.status === "future" ? "Fatura Futura" : "Fatura Passada"}
+                              {inv.status === "current"
+                                ? "Fatura Atual"
+                                : inv.status === "future"
+                                  ? "Fatura Futura"
+                                  : "Fatura Passada"}
                             </span>
                             <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${inv.isPaid ? 'text-emerald-500' : 'text-amber-500'}`}>
-                              {inv.isPaid ? 'Pago' : 'Em Aberto'}
+                            <span
+                              className={`text-[10px] font-black uppercase tracking-widest ${inv.isPaid ? "text-emerald-500" : "text-amber-500"}`}
+                            >
+                              {inv.isPaid ? "Pago" : "Em Aberto"}
                             </span>
                           </div>
                         </div>
@@ -279,9 +287,9 @@ export function CreditCardDetailModal({
                             {formatCurrency(inv.total)}
                           </p>
                         </div>
-                        
+
                         {!inv.isPaid && inv.paid > 0 && (
-                           <div className="text-right pr-6 border-r border-white/5">
+                          <div className="text-right pr-6 border-r border-white/5">
                             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1 text-emerald-500">
                               Pago
                             </p>
@@ -292,9 +300,11 @@ export function CreditCardDetailModal({
                         )}
 
                         <div className="flex flex-col items-center">
-                           <div className={`p-2 rounded-lg transition-colors ${inv.status === 'current' ? 'bg-[#ff632a] text-white' : 'bg-white/5 text-slate-500 group-hover:text-white'}`}>
+                          <div
+                            className={`p-2 rounded-lg transition-colors ${inv.status === "current" ? "bg-[#ff632a] text-white" : "bg-white/5 text-slate-500 group-hover:text-white"}`}
+                          >
                             <ArrowUpRight size={18} />
-                           </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -307,22 +317,26 @@ export function CreditCardDetailModal({
 
         {/* Footer Summary */}
         <div className="p-8 bg-white/5 border-t border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl">
-                    <TrendingDown size={20} />
-                </div>
-                <div>
-                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">Dívida Total Acumulada no Cartão</p>
-                    <p className="text-xl font-bold text-white">{formatCurrency(stats.totalDebt)}</p>
-                </div>
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl">
+              <TrendingDown size={20} />
             </div>
-            
-            <button 
-                onClick={onClose}
-                className="px-10 py-4 bg-white text-black rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a] hover:text-white transition-all active:scale-95"
-            >
-                Fechar Detalhes
-            </button>
+            <div>
+              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-none mb-1">
+                Dívida Total Acumulada no Cartão
+              </p>
+              <p className="text-xl font-bold text-white">
+                {formatCurrency(stats.totalDebt)}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="px-10 py-4 bg-white text-black rounded-2xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a] hover:text-white transition-all active:scale-95"
+          >
+            Fechar Detalhes
+          </button>
         </div>
       </div>
     </div>
