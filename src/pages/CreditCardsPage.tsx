@@ -164,13 +164,13 @@ export function CreditCardsPage() {
       });
       setMonthlyTrend(trend);
 
-      // Calculate future payoff projection (next 12 months)
-      const futureMonths = Array.from({ length: 12 }).map((_, i) => {
-        const d = startOfMonth(addMonths(new Date(), i));
+      // Calculate future payoff projection (past 6 months + next 12 months)
+      const projectionMonths = Array.from({ length: 18 }).map((_, i) => {
+        const d = startOfMonth(addMonths(new Date(), i - 6));
         return format(d, "yyyy-MM");
       });
 
-      const projection = futureMonths.map((m) => {
+      const projection = projectionMonths.map((m) => {
         const monthData: any = {
           monthKey: m,
           month: format(parseISO(m + "-01"), "MMM yy", { locale: ptBR }),
@@ -180,12 +180,12 @@ export function CreditCardsPage() {
           const cardMonthTotal =
             transData
               ?.filter(
-                (t) =>
-                  t.credit_card_id === card.id &&
-                  !t.is_paid &&
-                  t.due_date.startsWith(m),
+                (t) => t.credit_card_id === card.id && t.due_date.startsWith(m),
               )
-              .reduce((sum, t) => sum + t.amount, 0) || 0;
+              .reduce(
+                (sumValue: number, t: Transaction) => sumValue + t.amount,
+                0,
+              ) || 0;
 
           monthData[card.name] = cardMonthTotal;
           monthData.total += cardMonthTotal;
@@ -506,10 +506,10 @@ export function CreditCardsPage() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
             <div>
               <h3 className="text-2xl font-bold text-white tracking-tight leading-none mb-3">
-                Projeção de <span className="text-blue-400">Quitação</span>
+                Cronograma e <span className="text-blue-400">Projeção</span>
               </h3>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Fluxo de caixa necessário para liquidar parcelamentos atuais
+                Fluxo de gastos mensal (histórico e parcelamentos ativos)
               </p>
             </div>
             <div className="flex flex-wrap gap-4">
@@ -652,90 +652,6 @@ export function CreditCardsPage() {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Monthly Evolution Chart */}
-      {!loading && cards.length > 0 && (
-        <div className="bg-white/5 backdrop-blur-3xl p-10 rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden relative group">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#ff632a]/5 blur-[100px] rounded-full -z-10"></div>
-          <div className="flex items-center justify-between mb-10">
-            <div>
-              <h3 className="text-2xl font-bold text-white tracking-tight leading-none mb-3">
-                Evolução de Gastos{" "}
-                <span className="text-slate-500 italic">Mensal</span>
-              </h3>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Tendência de faturas acumuladas no semestre
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl">
-                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1 text-center">
-                  Média Mensal
-                </p>
-                <p className="text-lg font-bold text-white leading-none">
-                  {formatCurrency(
-                    monthlyTrend.reduce((acc, i) => acc + i.amount, 0) /
-                      (monthlyTrend.length || 1),
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ReAreaChart
-                data={monthlyTrend}
-                margin={{ top: 20, right: 30, left: 20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff632a" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ff632a" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="rgba(255,255,255,0.05)"
-                />
-                <XAxis
-                  dataKey="month"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 10, fontWeight: "bold" }}
-                  dy={15}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#64748b", fontSize: 10, fontWeight: "bold" }}
-                  tickFormatter={(value) => `R$ ${value / 1000}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#020617",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
-                  }}
-                  itemStyle={{ color: "#fff", fontWeight: "bold" }}
-                  formatter={(value: number) => formatCurrency(value)}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="amount"
-                  stroke="#ff632a"
-                  strokeWidth={4}
-                  fillOpacity={1}
-                  fill="url(#colorAmount)"
-                  animationDuration={2000}
-                />
-              </ReAreaChart>
-            </ResponsiveContainer>
           </div>
         </div>
       )}
