@@ -22,6 +22,7 @@ import { formatCurrency } from "../helpers/currency-formater";
 import { addMonthsSafe, formatDisplayDate } from "../helpers/date-utils";
 import { supabase } from "../lib/supabase";
 import { Transaction } from "../types";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -58,6 +59,7 @@ export function TransactionList({
     amountMode: "unit" as "total" | "unit",
     updateAllInstallments: false,
     installment_group_id: "" as string | null,
+    is_subscription: false,
   });
 
   const [deleteConfirm, setDeleteConfirm] = useState<{
@@ -66,6 +68,18 @@ export function TransactionList({
   }>({
     isOpen: false,
     transaction: null,
+  });
+
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+    variant?: "danger" | "warning" | "info" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
   });
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -224,6 +238,32 @@ export function TransactionList({
     }
   };
 
+  const payBill = async (transactionIds: string[]) => {
+    setDialogConfig({
+      isOpen: true,
+      title: "Liquidar Fatura",
+      description:
+        "Deseja marcar todos os lançamentos desta fatura como pagos?",
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from("transactions")
+          .update({ is_paid: true })
+          .in("id", transactionIds);
+
+        if (!error) {
+          onTransactionUpdated();
+        } else {
+          setDialogConfig({
+            isOpen: true,
+            title: "Erro",
+            description: "Erro ao liquidar fatura: " + error.message,
+            variant: "danger",
+          });
+        }
+      },
+    });
+  };
+
   const startEdit = (transaction: Transaction) => {
     setEditingId(transaction.id);
     setEditForm({
@@ -239,6 +279,7 @@ export function TransactionList({
       amountMode: "unit",
       updateAllInstallments: false,
       installment_group_id: transaction.installment_group_id || null,
+      is_subscription: transaction.is_subscription || false,
     });
   };
 
@@ -382,6 +423,7 @@ export function TransactionList({
             credit_card_id: editForm.credit_card_id,
             installment_number: startInst,
             total_installments: totalInstallments,
+            is_subscription: editForm.is_subscription,
           })
           .eq("id", transaction.id);
 
@@ -400,9 +442,14 @@ export function TransactionList({
     if (transaction.installment_group_id) {
       setDeleteConfirm({ isOpen: true, transaction });
     } else {
-      if (window.confirm("Tem certeza que deseja excluir esta transação?")) {
-        await executeDelete(transaction.id);
-      }
+      setDialogConfig({
+        isOpen: true,
+        title: "Excluir Transação",
+        description:
+          "Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.",
+        variant: "danger",
+        onConfirm: () => executeDelete(transaction.id),
+      });
     }
   };
 
@@ -418,7 +465,12 @@ export function TransactionList({
       onTransactionUpdated();
       setDeleteConfirm({ isOpen: false, transaction: null });
     } else {
-      alert("Erro ao excluir transação");
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro ao Excluir",
+        description: "Não foi possível excluir a transação: " + error.message,
+        variant: "danger",
+      });
     }
   };
 
@@ -613,6 +665,35 @@ export function TransactionList({
                     </div>
                   </div>
                 )}
+
+                {editForm.credit_card_id && editForm.installments === "1" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditForm({
+                        ...editForm,
+                        is_subscription: !editForm.is_subscription,
+                      })
+                    }
+                    className={`flex-1 py-4 rounded-xl font-bold transition-all border-2 text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 ${
+                      editForm.is_subscription
+                        ? "bg-[#ff632a]/10 border-[#ff632a]/50 text-[#ff632a] shadow-lg"
+                        : "bg-black/20 border-white/5 text-slate-600 hover:border-white/10"
+                    }`}
+                  >
+                    <PlusCircle
+                      size={14}
+                      className={
+                        editForm.is_subscription
+                          ? "rotate-45 transition-transform"
+                          : "transition-transform"
+                      }
+                    />
+                    {editForm.is_subscription
+                      ? "Assinatura Ativa"
+                      : "Marcar como Assinatura"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -695,6 +776,11 @@ export function TransactionList({
                           {transaction.total_installments})
                         </span>
                       )}
+                  </span>
+                )}
+                {transaction.is_subscription && (
+                  <span className="p-0.5 px-2 bg-purple-500/10 text-[8px] text-purple-400 rounded-lg font-bold uppercase tracking-widest flex items-center gap-1.5 border border-purple-500/20">
+                    <Clock size={10} /> Assinatura
                   </span>
                 )}
                 <span className="p-0.5 px-2 bg-white/5 text-[8px] text-slate-600 rounded-lg font-bold tracking-widest flex items-center gap-1.5 lg:hidden">
@@ -898,11 +984,25 @@ export function TransactionList({
                     </div>
 
                     <div className="flex items-center justify-center lg:justify-start relative z-10 w-full lg:w-auto">
-                      <div
-                        className={`px-5 py-3 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] border ${item.is_paid ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/10" : "bg-amber-500/10 text-amber-500 border-amber-500/10"}`}
-                      >
-                        {item.is_paid ? "Fatura Liquidada" : "Fatura em Aberto"}
-                      </div>
+                      {item.is_paid ? (
+                        <div className="px-5 py-3 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] border bg-emerald-500/10 text-emerald-400 border-emerald-500/10">
+                          Fatura Liquidada
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            payBill(item.transactions.map((t) => t.id));
+                          }}
+                          className="group/pay flex items-center gap-2 px-5 py-3 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] border bg-amber-500/10 text-amber-500 border-amber-500/10 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all active:scale-95 shadow-lg shadow-amber-500/5 hover:shadow-emerald-500/20"
+                        >
+                          <CheckCircle2
+                            size={12}
+                            className="group-hover/pay:scale-125 transition-transform"
+                          />
+                          <span>Liquidar Fatura</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between lg:justify-end gap-6 w-full lg:w-auto relative z-10">
@@ -999,6 +1099,14 @@ export function TransactionList({
           </div>
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={dialogConfig.isOpen}
+        onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+        onConfirm={dialogConfig.onConfirm}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        variant={dialogConfig.variant}
+      />
     </div>
   );
 }

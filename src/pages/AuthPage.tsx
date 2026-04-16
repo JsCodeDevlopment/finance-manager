@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import logo from "../../public/logo-light.png";
 import { supabase } from "../lib/supabase";
+import { ConfirmationDialog } from "../components/ConfirmationDialog";
 
 export function AuthPage() {
   const [searchParams] = useSearchParams();
@@ -13,6 +14,16 @@ export function AuthPage() {
     searchParams.get("signup") === "true",
   );
   const [loading, setLoading] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+  });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,13 +52,23 @@ export function AuthPage() {
       if (error) throw error;
 
       if (isSignUp) {
-        alert("Cadastro realizado com sucesso! Você já pode fazer login.");
+        setDialogConfig({
+          isOpen: true,
+          title: "Sucesso!",
+          description: "Cadastro realizado com sucesso! Você já pode fazer login.",
+          variant: 'success'
+        });
         setIsSignUp(false);
       } else {
         navigate("/dashboard");
       }
     } catch (error: any) {
-      alert(error.message);
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro de Autenticação",
+        description: error.message,
+        variant: 'danger'
+      });
     } finally {
       setLoading(false);
     }
@@ -151,6 +172,13 @@ export function AuthPage() {
           </div>
         </div>
       </div>
+      <ConfirmationDialog
+        isOpen={dialogConfig.isOpen}
+        onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        variant={dialogConfig.variant}
+      />
     </div>
   );
 }

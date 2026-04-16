@@ -12,6 +12,7 @@ export interface Transaction {
   installment_number?: number;
   total_installments?: number;
   installment_group_id?: string;
+  is_subscription?: boolean;
   created_at: string;
 }
 

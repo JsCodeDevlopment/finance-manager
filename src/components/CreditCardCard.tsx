@@ -4,6 +4,7 @@ import {
   CreditCard as CardIcon,
   Trash2,
   TrendingUp,
+  Edit2,
 } from "lucide-react";
 import { formatCurrency } from "../helpers/currency-formater";
 import { CreditCard } from "../types";
@@ -11,10 +12,12 @@ import { CreditCard } from "../types";
 interface CreditCardCardProps {
   card: CreditCard;
   onDelete: (id: string) => void;
+  onEdit: (card: CreditCard) => void;
+  onPayBill: (id: string) => void;
   onClick: () => void;
 }
 
-export function CreditCardCard({ card, onDelete, onClick }: CreditCardCardProps) {
+export function CreditCardCard({ card, onDelete, onEdit, onPayBill, onClick }: CreditCardCardProps) {
   const usagePercentage =
     card.limit_amount > 0
       ? ((card.total_debt || 0) / card.limit_amount) * 100
@@ -51,15 +54,26 @@ export function CreditCardCard({ card, onDelete, onClick }: CreditCardCardProps)
               </p>
             </div>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(card.id);
-            }}
-            className="p-3 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
-          >
-            <Trash2 size={20} />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(card);
+              }}
+              className="p-3 text-slate-600 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+            >
+              <Edit2 size={20} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(card.id);
+              }}
+              className="p-3 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -74,14 +88,27 @@ export function CreditCardCard({ card, onDelete, onClick }: CreditCardCardProps)
                   {formatCurrency(card.current_bill || 0)}
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-[9px] font-bold uppercase text-slate-600 tracking-widest mb-1.5">
-                  Total Devedor
-                </p>
-                <p className="text-sm font-bold text-slate-400 tracking-tight">
-                  {formatCurrency(card.total_debt || 0)}
-                </p>
-              </div>
+              
+              {card.current_bill && card.current_bill > 0 ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPayBill(card.id);
+                  }}
+                  className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-lg border border-emerald-500/20 transition-all text-[8px] font-black uppercase tracking-widest flex items-center gap-2"
+                >
+                  Liquidar Fatura
+                </button>
+              ) : (
+                <div className="text-right">
+                  <p className="text-[9px] font-bold uppercase text-slate-600 tracking-widest mb-1.5">
+                    Total Devedor
+                  </p>
+                  <p className="text-sm font-bold text-slate-400 tracking-tight">
+                    {formatCurrency(card.total_debt || 0)}
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 flex justify-between items-center">

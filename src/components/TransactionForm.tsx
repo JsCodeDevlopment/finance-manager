@@ -13,6 +13,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { addMonthsSafe } from "../helpers/date-utils";
 import { supabase } from "../lib/supabase";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface TransactionFormProps {
   onTransactionAdded: () => void;
@@ -45,7 +46,18 @@ export function TransactionForm({
   const [amountMode, setAmountMode] = useState<"total" | "unit">("unit");
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [isSubscription, setIsSubscription] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant?: 'danger' | 'warning' | 'info' | 'success';
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+  });
 
   useEffect(() => {
     fetchReservations();
@@ -132,6 +144,7 @@ export function TransactionForm({
           installment_number: i,
           total_installments: numInstallments,
           installment_group_id: installmentGroupId,
+          is_subscription: numInstallments === 1 ? isSubscription : false,
           user_id: user.id,
           is_paid: type === "income" ? true : false,
         });
@@ -152,6 +165,7 @@ export function TransactionForm({
         setCreditCardId("");
         setInstallments("1");
         setStartInstallment("1");
+        setIsSubscription(false);
         setAmountMode("unit");
         onTransactionAdded();
       } else {
@@ -159,7 +173,12 @@ export function TransactionForm({
       }
     } catch (error: unknown) {
       const err = error as Error;
-      alert("Erro ao adicionar transação: " + err.message);
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro ao Salvar",
+        description: "Não foi possível registrar a transação: " + err.message,
+        variant: 'danger'
+      });
     } finally {
       setLoading(false);
     }
@@ -300,6 +319,21 @@ export function TransactionForm({
                   </button>
                 </div>
 
+                {installments === "1" && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSubscription(!isSubscription)}
+                    className={`w-full py-4 rounded-xl font-bold transition-all border-2 text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 ${
+                      isSubscription
+                        ? "bg-[#ff632a]/10 border-[#ff632a]/50 text-[#ff632a] shadow-lg"
+                        : "bg-black/20 border-white/5 text-slate-600 hover:border-white/10"
+                    }`}
+                  >
+                    <PlusCircle size={14} className={isSubscription ? "rotate-45 transition-transform" : "transition-transform"} />
+                    {isSubscription ? "Assinatura Ativa" : "Marcar como Assinatura"}
+                  </button>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="relative group">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-[#ff632a] transition-colors">
@@ -374,6 +408,14 @@ export function TransactionForm({
         <PlusCircle size={20} />
         {loading ? "Processando..." : "Confirmar Lançamento"}
       </button>
+
+      <ConfirmationDialog
+        isOpen={dialogConfig.isOpen}
+        onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        variant={dialogConfig.variant}
+      />
     </form>
   );
 }

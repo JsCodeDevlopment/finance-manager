@@ -28,8 +28,7 @@ export function TransactionsPage() {
       .from("transactions")
       .select("*")
       .is("reservation_id", null)
-      .gte("due_date", startDate)
-      .lte("due_date", endDate)
+      .or(`and(due_date.gte.${startDate},due_date.lte.${endDate}),and(is_subscription.eq.true,due_date.lte.${endDate})`)
       .order("due_date", { ascending: true });
 
     if (data) {

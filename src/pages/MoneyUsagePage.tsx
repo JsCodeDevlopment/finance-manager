@@ -1,21 +1,19 @@
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format, startOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MonthSelector } from "../components/MonthSelector";
 import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Download,
   Edit2,
+  History,
   Info,
-  Minus,
   PieChart,
   Plus,
   PlusCircle,
   Trash2,
   TrendingDown,
   WalletCards,
-  History,
-  Download,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -25,6 +23,9 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { ConfirmationDialog } from "../components/ConfirmationDialog";
+import { MonthSelector } from "../components/MonthSelector";
+import { ReservationForm } from "../components/ReservationForm";
 import { formatCurrency } from "../helpers/currency-formater";
 import { supabase } from "../lib/supabase";
 import { Transaction } from "../types";
@@ -43,7 +44,6 @@ interface Reservation {
 export function MoneyUsagePage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
   const [expenseFormReservationId, setExpenseFormReservationId] = useState<
     string | null
   >(null);
@@ -55,8 +55,9 @@ export function MoneyUsagePage() {
   >({});
 
   // Reservation form state
-  const [newName, setNewName] = useState("");
-  const [newTotal, setNewTotal] = useState("");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingReservation, setEditingReservation] =
+    useState<Reservation | null>(null);
 
   // Quick Expense form state
   const [expenseDescription, setExpenseDescription] = useState("");
@@ -70,6 +71,18 @@ export function MoneyUsagePage() {
   const [editForm, setEditForm] = useState({
     description: "",
     amount: "",
+  });
+
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm?: () => void;
+    variant?: "danger" | "warning" | "info" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
   });
 
   const fetchReservations = useCallback(async () => {
@@ -122,61 +135,26 @@ export function MoneyUsagePage() {
     fetchReservations();
   }, [fetchReservations, selectedMonth]);
 
-  const handleAddReservation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        alert("Sessão expirada. Faça login novamente.");
-        return;
-      }
-
-      if (!newTotal || isNaN(parseFloat(newTotal))) {
-        alert("Informe um valor total válido.");
-        return;
-      }
-
-      const { error } = await supabase.from("reservations").insert([
-        {
-          user_id: user.id,
-          name: newName,
-          total_amount: parseFloat(newTotal),
-          month_date: format(selectedMonth, "yyyy-MM-01"),
-        },
-      ]);
-
-      if (error) {
-        console.error("Supabase Error:", error);
-        alert(`Erro ao criar reserva: ${error.message} (${error.code})`);
-      } else {
-        setNewName("");
-        setNewTotal("");
-        setShowAddForm(false);
-        await fetchReservations();
-      }
-    } catch (err: unknown) {
-      console.error("Internal Error:", err);
-      alert("Ocorreu um erro interno ao processar a reserva.");
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = async (id: string) => {
+    setDialogConfig({
+      isOpen: true,
+      title: "Confirmar Exclusão",
+      description:
+        "Isso removerá a reserva, mas as transações vinculadas permanecerão. Continuar?",
+      variant: "danger",
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from("reservations")
+          .delete()
+          .eq("id", id);
+        if (!error) fetchReservations();
+      },
+    });
   };
 
-  const handleDelete = async (id: string) => {
-    if (
-      !window.confirm(
-        "Isso removerá a reserva, mas as transações vinculadas permanecerão. Continuar?",
-      )
-    )
-      return;
-
-    const { error } = await supabase.from("reservations").delete().eq("id", id);
-    if (!error) fetchReservations();
+  const startEditReservation = (res: Reservation) => {
+    setEditingReservation(res);
+    setIsFormOpen(true);
   };
 
   const handleQuickExpense = async (res: Reservation) => {
@@ -206,7 +184,12 @@ export function MoneyUsagePage() {
       ]);
 
       if (error) {
-        alert("Erro ao registrar gasto: " + error.message);
+        setDialogConfig({
+          isOpen: true,
+          title: "Erro",
+          description: "Erro ao registrar gasto: " + error.message,
+          variant: "danger",
+        });
       } else {
         setExpenseAmount("");
         setExpenseDescription("");
@@ -241,20 +224,38 @@ export function MoneyUsagePage() {
       setEditingTransactionId(null);
       await fetchReservations();
     } else {
-      alert("Erro ao atualizar: " + error.message);
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro",
+        description: "Erro ao atualizar: " + error.message,
+        variant: "danger",
+      });
     }
   };
 
   const handleDeleteTransaction = async (id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este gasto?")) return;
-
-    const { error } = await supabase.from("transactions").delete().eq("id", id);
-
-    if (!error) {
-      await fetchReservations();
-    } else {
-      alert("Erro ao excluir: " + error.message);
-    }
+    setDialogConfig({
+      isOpen: true,
+      title: "Excluir Gasto",
+      description: "Tem certeza que deseja excluir este gasto?",
+      variant: "danger",
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", id);
+        if (!error) {
+          await fetchReservations();
+        } else {
+          setDialogConfig({
+            isOpen: true,
+            title: "Erro",
+            description: "Erro ao excluir: " + error.message,
+            variant: "danger",
+          });
+        }
+      },
+    });
   };
 
   const openImportModal = async () => {
@@ -269,8 +270,10 @@ export function MoneyUsagePage() {
 
     if (data) {
       // Filter out reservations that already exist in current month by name
-      const currentNames = reservations.map(r => r.name);
-      const availableToImport = data.filter(r => !currentNames.includes(r.name));
+      const currentNames = reservations.map((r) => r.name);
+      const availableToImport = data.filter(
+        (r) => !currentNames.includes(r.name),
+      );
       setPastReservations(availableToImport);
       setIsImporting(true);
     }
@@ -279,14 +282,16 @@ export function MoneyUsagePage() {
 
   const handleImportReservations = async (toImport: Reservation[]) => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
-    const newEntries = toImport.map(r => ({
+    const newEntries = toImport.map((r) => ({
       user_id: user.id,
       name: r.name,
       total_amount: r.total_amount,
-      month_date: format(selectedMonth, "yyyy-MM-01")
+      month_date: format(selectedMonth, "yyyy-MM-01"),
     }));
 
     const { error } = await supabase.from("reservations").insert(newEntries);
@@ -295,7 +300,12 @@ export function MoneyUsagePage() {
       setIsImporting(false);
       await fetchReservations();
     } else {
-      alert("Erro ao importar: " + error.message);
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro",
+        description: "Erro ao importar: " + error.message,
+        variant: "danger",
+      });
     }
     setLoading(false);
   };
@@ -323,62 +333,17 @@ export function MoneyUsagePage() {
           </div>
 
           <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className={`flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all shadow-2xl uppercase text-[10px] tracking-widest border border-white/5 active:scale-95 ${
-              showAddForm
-                ? "bg-white/5 text-slate-500"
-                : "bg-[#ff632a] text-white shadow-orange-500/20"
-            }`}
+            onClick={() => {
+              setEditingReservation(null);
+              setIsFormOpen(true);
+            }}
+            className="flex items-center justify-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all shadow-2xl uppercase text-[10px] tracking-widest border border-white/5 bg-[#ff632a] text-white shadow-orange-500/20 hover:shadow-orange-500/40 active:scale-95"
           >
-            {showAddForm ? <Minus size={18} /> : <Plus size={18} />}
-            <span>{showAddForm ? "Cancelar" : "Nova Reserva"}</span>
+            <Plus size={18} />
+            <span>Nova Reserva</span>
           </button>
         </div>
       </div>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="bg-white/5 backdrop-blur-3xl p-10 rounded-3xl border border-white/10 shadow-2xl slide-in-up transition-all">
-          <form
-            onSubmit={handleAddReservation}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end"
-          >
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500 mb-3 ml-2">
-                Identificação
-              </label>
-              <input
-                required
-                type="text"
-                placeholder="Ex: Reserva Emergencial, Reforma..."
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="w-full bg-black/20 p-4 rounded-xl border border-white/5 focus:border-[#ff632a] outline-none font-bold text-white placeholder-slate-600 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500 mb-3 ml-2">
-                Aporte Total
-              </label>
-              <input
-                required
-                type="number"
-                step="0.01"
-                placeholder="R$ 0,00"
-                value={newTotal}
-                onChange={(e) => setNewTotal(e.target.value)}
-                className="w-full bg-black/20 p-4 rounded-xl border border-white/5 focus:border-[#ff632a] outline-none font-bold text-white placeholder-slate-600 transition-all"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full h-[58px] bg-white text-black rounded-xl font-bold hover:bg-[#ff632a] hover:text-white transition-all flex items-center justify-center gap-2 uppercase text-[10px] tracking-widest shadow-xl"
-            >
-              <Plus size={18} /> Consolidar Reserva
-            </button>
-          </form>
-        </div>
-      )}
 
       {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -439,11 +404,15 @@ export function MoneyUsagePage() {
               Mês operacional sem caixinhas.
             </h3>
             <p className="text-slate-600 mb-10 text-sm max-w-xs mx-auto">
-              Você pode iniciar uma nova do zero ou importar as configurações do mês anterior.
+              Você pode iniciar uma nova do zero ou importar as configurações do
+              mês anterior.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
-                onClick={() => setShowAddForm(true)}
+                onClick={() => {
+                  setEditingReservation(null);
+                  setIsFormOpen(true);
+                }}
                 className="w-full sm:w-auto px-10 py-4 bg-[#ff632a] text-white rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a]/80 transition-all"
               >
                 Nova do Zero
@@ -481,12 +450,20 @@ export function MoneyUsagePage() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(res.id)}
-                  className="p-3 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
-                >
-                  <Trash2 size={20} />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEditReservation(res)}
+                    className="p-3 text-slate-600 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                  >
+                    <Edit2 size={20} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(res.id)}
+                    className="p-3 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
               </div>
 
               {/* Data Visualization & Stats */}
@@ -777,30 +754,46 @@ export function MoneyUsagePage() {
       {/* Import Modal */}
       {isImporting && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsImporting(false)}></div>
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setIsImporting(false)}
+          ></div>
           <div className="relative bg-[#020617] w-full max-w-2xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="p-10 border-b border-white/5">
               <div className="flex items-center gap-4 mb-2">
                 <History className="text-[#ff632a]" />
-                <h3 className="text-2xl font-bold text-white tracking-tight">Restauração Patrimonial</h3>
+                <h3 className="text-2xl font-bold text-white tracking-tight">
+                  Restauração Patrimonial
+                </h3>
               </div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Selecione as caixinhas que deseja renovar para este mês.</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+                Selecione as caixinhas que deseja renovar para este mês.
+              </p>
             </div>
 
             <div className="p-6 max-h-[400px] overflow-y-auto custom-scrollbar">
               {pastReservations.length === 0 ? (
                 <div className="py-20 text-center">
-                  <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">Nenhum registro encontrado no mÃªs anterior.</p>
+                  <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">
+                    Nenhum registro encontrado no mÃªs anterior.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {pastReservations.map(res => (
-                    <div key={res.id} className="bg-white/5 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-[#ff632a]/30 transition-all">
+                  {pastReservations.map((res) => (
+                    <div
+                      key={res.id}
+                      className="bg-white/5 border border-white/5 p-6 rounded-2xl flex items-center justify-between group hover:border-[#ff632a]/30 transition-all"
+                    >
                       <div>
-                        <p className="text-white font-bold group-hover:text-[#ff632a] transition-colors">{res.name}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valor Reservado: {formatCurrency(res.total_amount)}</p>
+                        <p className="text-white font-bold group-hover:text-[#ff632a] transition-colors">
+                          {res.name}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          Valor Reservado: {formatCurrency(res.total_amount)}
+                        </p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => handleImportReservations([res])}
                         className="p-3 bg-white/5 text-slate-400 rounded-xl hover:bg-[#ff632a] hover:text-white transition-all active:scale-95"
                       >
@@ -809,7 +802,7 @@ export function MoneyUsagePage() {
                     </div>
                   ))}
                   <div className="mt-8">
-                    <button 
+                    <button
                       onClick={() => handleImportReservations(pastReservations)}
                       className="w-full py-4 bg-white text-black rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-[#ff632a] hover:text-white transition-all"
                     >
@@ -819,13 +812,39 @@ export function MoneyUsagePage() {
                 </div>
               )}
             </div>
-            
+
             <div className="p-8 bg-black/40 text-center">
-               <button onClick={() => setIsImporting(false)} className="text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-all">Fechar Assistente</button>
+              <button
+                onClick={() => setIsImporting(false)}
+                className="text-slate-500 font-bold uppercase text-[10px] tracking-widest hover:text-white transition-all"
+              >
+                Fechar Assistente
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {isFormOpen && (
+        <ReservationForm
+          reservation={editingReservation || undefined}
+          onReservationAdded={fetchReservations}
+          onClose={() => {
+            setIsFormOpen(false);
+            setEditingReservation(null);
+          }}
+          selectedMonth={selectedMonth}
+        />
+      )}
+
+      <ConfirmationDialog
+        isOpen={dialogConfig.isOpen}
+        onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+        onConfirm={dialogConfig.onConfirm}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        variant={dialogConfig.variant}
+      />
     </div>
   );
 }

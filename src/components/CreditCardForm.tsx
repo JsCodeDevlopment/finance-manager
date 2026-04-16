@@ -1,26 +1,46 @@
 import {
   Calendar,
   CreditCard as CardIcon,
+  Edit2,
   Palette,
   Plus,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { CreditCard } from "../types";
+import { ConfirmationDialog } from "./ConfirmationDialog";
 
 interface CreditCardFormProps {
   onCardAdded: () => void;
   onClose: () => void;
+  card?: CreditCard;
 }
 
-export function CreditCardForm({ onCardAdded, onClose }: CreditCardFormProps) {
-  const [name, setName] = useState("");
-  const [limit, setLimit] = useState("");
-  const [closingDay, setClosingDay] = useState("");
-  const [dueDay, setDueDay] = useState("");
-  const [color, setColor] = useState("#ff632a");
-  const [last4, setLast4] = useState("");
+export function CreditCardForm({
+  onCardAdded,
+  onClose,
+  card,
+}: CreditCardFormProps) {
+  const [name, setName] = useState(card?.name || "");
+  const [limit, setLimit] = useState(card?.limit_amount.toString() || "");
+  const [closingDay, setClosingDay] = useState(
+    card?.closing_day.toString() || "",
+  );
+  const [dueDay, setDueDay] = useState(card?.due_day.toString() || "");
+  const [color, setColor] = useState(card?.color || "#ff632a");
+  const [last4, setLast4] = useState(card?.last_4 || "");
   const [loading, setLoading] = useState(false);
+  const [dialogConfig, setDialogConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    variant?: "danger" | "warning" | "info" | "success";
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+  });
 
   const colors = [
     "#ff632a", // Orange (Default)
@@ -43,24 +63,31 @@ export function CreditCardForm({ onCardAdded, onClose }: CreditCardFormProps) {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase.from("credit_cards").insert([
-        {
-          user_id: user.id,
-          name,
-          limit_amount: parseFloat(limit),
-          closing_day: parseInt(closingDay),
-          due_day: parseInt(dueDay),
-          color,
-          last_4: last4,
-        },
-      ]);
+      const cardData = {
+        user_id: user.id,
+        name,
+        limit_amount: parseFloat(limit),
+        closing_day: parseInt(closingDay),
+        due_day: parseInt(dueDay),
+        color,
+        last_4: last4,
+      };
+
+      const { error } = card
+        ? await supabase.from("credit_cards").update(cardData).eq("id", card.id)
+        : await supabase.from("credit_cards").insert([cardData]);
 
       if (error) throw error;
 
       onCardAdded();
       onClose();
     } catch (error: any) {
-      alert("Erro ao salvar cartÃ£o: " + error.message);
+      setDialogConfig({
+        isOpen: true,
+        title: "Erro ao Salvar",
+        description: "Erro ao salvar cartão: " + error.message,
+        variant: "danger",
+      });
     } finally {
       setLoading(false);
     }
@@ -80,11 +107,13 @@ export function CreditCardForm({ onCardAdded, onClose }: CreditCardFormProps) {
                 <CardIcon size={24} />
               </div>
               <h3 className="text-2xl font-bold text-white tracking-tight">
-                Novo Cartão
+                {card ? "Editar Cartão" : "Novo Cartão"}
               </h3>
             </div>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-              Configure os detalhes do seu cartão de crédito.
+              {card
+                ? "Atualize as configurações do seu cartão."
+                : "Configure os detalhes do seu cartão de crédito."}
             </p>
           </div>
           <button
@@ -202,11 +231,22 @@ export function CreditCardForm({ onCardAdded, onClose }: CreditCardFormProps) {
             disabled={loading}
             className="w-full py-5 bg-white text-black rounded-2xl font-bold uppercase text-xs tracking-[0.2em] hover:bg-[#ff632a] hover:text-white transition-all active:scale-95 shadow-2xl disabled:opacity-50 mt-4 flex items-center justify-center gap-3"
           >
-            <Plus size={18} />
-            {loading ? "Cadastrando..." : "Confirmar Cartão"}
+            {card ? <Edit2 size={18} /> : <Plus size={18} />}
+            {loading
+              ? "Salvando..."
+              : card
+                ? "Salvar Alterações"
+                : "Confirmar Cartão"}
           </button>
         </form>
       </div>
+      <ConfirmationDialog
+        isOpen={dialogConfig.isOpen}
+        onClose={() => setDialogConfig({ ...dialogConfig, isOpen: false })}
+        title={dialogConfig.title}
+        description={dialogConfig.description}
+        variant={dialogConfig.variant}
+      />
     </div>
   );
 }
