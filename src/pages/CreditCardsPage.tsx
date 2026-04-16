@@ -32,6 +32,53 @@ import { formatCurrency } from "../helpers/currency-formater";
 import { supabase } from "../lib/supabase";
 import { CreditCard, Transaction } from "../types";
 
+const CustomTooltip = ({ active, payload, label, showTotal = false }: any) => {
+  if (active && payload && payload.length) {
+    const total = payload.reduce((acc: number, entry: any) => acc + (entry.value || 0), 0);
+    return (
+      <div className="bg-[#020617]/95 backdrop-blur-xl border border-white/10 p-5 rounded-2xl shadow-2xl min-w-[220px] animate-in fade-in zoom-in-95 duration-200">
+        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-white/5 pb-2">
+          {label || "Detalhamento"}
+        </p>
+        <div className="space-y-3">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-2.5">
+                <div 
+                  className="w-2 h-2 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]" 
+                  style={{ backgroundColor: entry.color || entry.payload?.fill || entry.fill || "#fff" }}
+                ></div>
+                <span className="text-[11px] font-bold text-white/90 truncate max-w-[140px]">
+                  {entry.name}
+                </span>
+              </div>
+              <span className="text-[11px] font-black text-white font-mono">
+                {formatCurrency(entry.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+        {showTotal && payload.length > 1 && (
+          <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between gap-4">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-[#ff632a] uppercase tracking-widest leading-none mb-1">
+                Total Consolidado
+              </span>
+              <span className="text-[8px] font-bold text-slate-500 uppercase tracking-tight">
+                Soma de todos os cartões
+              </span>
+            </div>
+            <span className="text-sm font-black text-white font-mono">
+              {formatCurrency(total)}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
+
 export function CreditCardsPage() {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -381,16 +428,7 @@ export function CreditCardsPage() {
                       />
                     ))}
                   </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#020617",
-                      borderRadius: "16px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
-                    }}
-                    itemStyle={{ color: "#fff", fontWeight: "bold" }}
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                 </RePieChart>
               </ResponsiveContainer>
             </div>
@@ -458,14 +496,9 @@ export function CreditCardsPage() {
                     tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: "bold" }}
                     width={80}
                   />
-                  <Tooltip
-                    cursor={{ fill: "transparent" }}
-                    contentStyle={{
-                      backgroundColor: "#020617",
-                      borderRadius: "16px",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                    }}
-                    formatter={(value: number) => formatCurrency(value)}
+                  <Tooltip 
+                    cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                    content={<CustomTooltip />} 
                   />
                   <Bar
                     dataKey="limit_amount"
@@ -582,19 +615,7 @@ export function CreditCardsPage() {
                   tick={{ fill: "#64748b", fontSize: 10, fontWeight: "bold" }}
                   tickFormatter={(value) => `R$ ${value / 1000}k`}
                 />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#020617",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
-                  }}
-                  itemStyle={{ color: "#fff", fontWeight: "bold" }}
-                  formatter={(value: number, name: string) => [
-                    formatCurrency(value),
-                    name,
-                  ]}
-                />
+                <Tooltip content={<CustomTooltip showTotal={true} />} />
                 {cards.map((card) => (
                   <Area
                     key={card.id}
